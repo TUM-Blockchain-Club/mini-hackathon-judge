@@ -11,12 +11,10 @@ type Receipt = {
 export function Submission({
   state,
   teamId,
-  useCode,
   refresh,
 }: {
   state: string;
-  teamId?: string;
-  useCode: boolean;
+  teamId: string;
   refresh: () => Promise<void>;
 }) {
   const [method, setMethod] = useState('github'),
@@ -27,10 +25,10 @@ export function Submission({
   const open = state === 'open' || state === 'late';
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!open || (!teamId && !useCode) || busy) return;
+    if (!open || busy) return;
     const data = new FormData(e.currentTarget);
     data.set('method', method);
-    data.set('sessionTeam', teamId ?? '');
+    data.set('sessionTeam', teamId);
     setBusy(true);
     setError('');
     try {
@@ -76,19 +74,6 @@ export function Submission({
     );
   return (
     <form className="reg-form project-form" onSubmit={submit}>
-      {useCode && (
-        <label>
-          Team access code
-          <input
-            id="access-code"
-            name="code"
-            autoComplete="off"
-            required
-            maxLength={64}
-            placeholder="Code from your organizer"
-          />
-        </label>
-      )}
       <label>
         Project title
         <input name="title" required maxLength={100} />
@@ -184,10 +169,7 @@ export function Submission({
         </p>
       )}
       <div className="submission-send">
-        <button
-          className="reg-primary"
-          disabled={!open || (!teamId && !useCode) || busy}
-        >
+        <button className="reg-primary" disabled={!open || busy}>
           {busy ? 'Submitting…' : 'Submit project'}
         </button>
         <small aria-live="polite">
@@ -199,9 +181,7 @@ export function Submission({
                 ? 'The submission service is unavailable.'
                 : state === 'late'
                   ? 'Submitting now applies the 5-point late deduction.'
-                  : open && !teamId && !useCode
-                    ? 'Log in or sign up your team to submit.'
-                    : ''}
+                  : ''}
         </small>
       </div>
     </form>

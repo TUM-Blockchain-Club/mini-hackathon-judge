@@ -11,15 +11,14 @@ type Desk = {
   closes?: string;
   team: { id: string; name: string } | null;
 };
-type Access = 'login' | 'signup' | 'code';
+type Access = 'login' | 'signup';
 
 export function SubmissionDesk() {
   const [desk, setDesk] = useState<Desk | null>(null),
     [access, setAccess] = useState<Access>('login'),
     [error, setError] = useState(''),
     [signingOut, setSigningOut] = useState(false),
-    [directoryFor, setDirectoryFor] = useState<string | null>(null),
-    [reset, setReset] = useState(0);
+    [directoryFor, setDirectoryFor] = useState<string | null>(null);
   const sequence = useRef(0);
   const previousTeam = useRef<string | undefined>(undefined);
   const refresh = useCallback(async () => {
@@ -28,7 +27,6 @@ export function SubmissionDesk() {
       const info = await send<Desk>('/api/submissions', 'GET');
       if (request === sequence.current) {
         if (previousTeam.current && previousTeam.current !== info.team?.id) {
-          setReset((n) => n + 1);
           setDirectoryFor(null);
         }
         previousTeam.current = info.team?.id;
@@ -44,16 +42,7 @@ export function SubmissionDesk() {
   }, []);
   useEffect(() => {
     function readAccess() {
-      switch (window.location.hash) {
-        case '#signup':
-          setAccess('signup');
-          break;
-        case '#access-code':
-          setAccess('code');
-          break;
-        default:
-          setAccess('login');
-      }
+      setAccess(window.location.hash === '#signup' ? 'signup' : 'login');
     }
     readAccess();
     window.addEventListener('hashchange', readAccess);
@@ -99,7 +88,7 @@ export function SubmissionDesk() {
       await send('/api/team/logout', 'POST');
       previousTeam.current = undefined;
       setDirectoryFor(null);
-      setReset((n) => n + 1);
+      setDesk((info) => info && { ...info, team: null });
       await identified();
     } catch (err) {
       setError(problem(err));
@@ -161,12 +150,6 @@ export function SubmissionDesk() {
             >
               Sign up a team
             </a>
-            <a
-              href="#access-code"
-              aria-current={access === 'code' ? 'location' : undefined}
-            >
-              Use access code
-            </a>
           </nav>
         ) : (
           <span role="status">
@@ -196,13 +179,14 @@ export function SubmissionDesk() {
           </button>
         </p>
       )}
-      <Submission
-        key={reset}
-        state={desk?.state ?? 'loading'}
-        teamId={desk?.team?.id}
-        useCode={access === 'code' && !desk?.team}
-        refresh={refresh}
-      />
+      {desk && team && (
+        <Submission
+          key={team.id}
+          state={desk.state}
+          teamId={team.id}
+          refresh={refresh}
+        />
+      )}
     </section>
   );
 }

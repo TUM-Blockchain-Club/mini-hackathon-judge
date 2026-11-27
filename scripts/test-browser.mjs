@@ -92,7 +92,39 @@ try {
   const directoryUrl = origin + '/api/team/directory';
   assert.equal((await p.request.get(directoryUrl)).status(), 401);
   assert.equal(await p.getByRole('button', { name: 'Other teams' }).count(), 0);
-  await p.getByLabel('Project title').fill('Draft before signup');
+  assert.equal(await p.getByLabel('Project title').count(), 0);
+  assert.equal(
+    await p.getByRole('button', { name: 'Submit project' }).count(),
+    0,
+  );
+  await p.goto(origin + '/submit#access-code');
+  await p.getByRole('heading', { name: 'Team login' }).waitFor();
+  assert.equal(await p.getByLabel('Team access code').count(), 0);
+  assert.equal(await p.getByLabel('Project title').count(), 0);
+  await accountNav.getByRole('link', { name: 'Sign up a team' }).click();
+  await p.getByRole('heading', { name: 'Register your team' }).waitFor();
+  const signupName = p.getByLabel('Team name', { exact: true });
+  await signupName.fill('Bad name');
+  assert.ok(
+    await signupName.evaluate((input) => input.validity.patternMismatch),
+  );
+  await signupName.fill(name);
+  await p.locator('input[name=password]').fill(teamPassword);
+  const names = [
+    ['Jae', 'Park'],
+    ['Ada', 'Fern'],
+    ['Ren', 'Weiss'],
+  ];
+  for (const [i, [first, last]] of names.entries()) {
+    if (i) await p.getByRole('button', { name: 'Add member' }).click();
+    await p.getByLabel('First name', { exact: true }).nth(i).fill(first);
+    await p.getByLabel('Surname', { exact: true }).nth(i).fill(last);
+  }
+  assert.equal(await p.getByRole('button', { name: 'Add member' }).count(), 0);
+  await p.getByRole('button', { name: 'Register team' }).click();
+  await p.getByRole('button', { name: 'Log out' }).waitFor();
+  assert.equal(new URL(p.url()).pathname, '/submit');
+  await p.getByLabel('Project title').fill('Signed-in draft');
   await p.getByRole('radio', { name: 'File upload' }).check();
   await p.locator('input[type=file]').setInputFiles({
     name: 'draft.txt',
@@ -122,40 +154,13 @@ try {
   await p.getByRole('heading', { name: 'Project submission' }).waitFor();
   assert.equal(
     await p.getByLabel('Project title').inputValue(),
-    'Draft before signup',
+    'Signed-in draft',
   );
   assert.equal(
     await p
       .locator('input[type=file]')
       .evaluate((input) => input.files[0]?.name),
     'draft.txt',
-  );
-  await accountNav.getByRole('link', { name: 'Sign up a team' }).click();
-  await p.getByRole('heading', { name: 'Register your team' }).waitFor();
-  const signupName = p.getByLabel('Team name', { exact: true });
-  await signupName.fill('Bad name');
-  assert.ok(
-    await signupName.evaluate((input) => input.validity.patternMismatch),
-  );
-  await signupName.fill(name);
-  await p.locator('input[name=password]').fill(teamPassword);
-  const names = [
-    ['Jae', 'Park'],
-    ['Ada', 'Fern'],
-    ['Ren', 'Weiss'],
-  ];
-  for (const [i, [first, last]] of names.entries()) {
-    if (i) await p.getByRole('button', { name: 'Add member' }).click();
-    await p.getByLabel('First name', { exact: true }).nth(i).fill(first);
-    await p.getByLabel('Surname', { exact: true }).nth(i).fill(last);
-  }
-  assert.equal(await p.getByRole('button', { name: 'Add member' }).count(), 0);
-  await p.getByRole('button', { name: 'Register team' }).click();
-  await p.getByRole('button', { name: 'Log out' }).waitFor();
-  assert.equal(new URL(p.url()).pathname, '/submit');
-  assert.equal(
-    await p.getByLabel('Project title').inputValue(),
-    'Draft before signup',
   );
   assert.equal(await p.getByText('Ada Fern').count(), 0);
   const me = await (await p.request.get(origin + '/api/team/me')).json();
@@ -537,11 +542,61 @@ try {
   );
 
   await p.getByRole('button', { name: 'Log out' }).click();
-  await accountNav.getByRole('link', { name: 'Use access code' }).click();
+  await p.getByRole('heading', { name: 'Team login' }).waitFor();
+  assert.equal(
+    await p.getByRole('button', { name: 'Submit project' }).count(),
+    0,
+  );
   const invite = randomBytes(12).toString('hex').toUpperCase();
   const inviteHash = createHash('sha256').update(invite).digest('hex');
-  await isolated`INSERT INTO teams(name,code_hash) VALUES('Invite fixture',${inviteHash})`;
-  await p.getByLabel('Team access code').fill(invite);
+  const [inviteTeam] =
+    await isolated`INSERT INTO teams(name,code_hash) VALUES('Invite fixture',${inviteHash}) RETURNING id,name`;
+  const upload = {
+    method: 'file',
+    title: 'Late revision',
+    focus: 'tax-own',
+    file: {
+      name: 'proof.txt',
+      mimeType: 'text/plain',
+      buffer: Buffer.from('revision'),
+    },
+  };
+  const submissionsUrl = origin + '/api/submissions';
+  for (const fields of [
+    {},
+    { code: invite, sessionTeam: inviteTeam.id },
+    { code: invite },
+  ]) {
+    const denied = await p.request.post(submissionsUrl, {
+      multipart: { ...upload, ...fields },
+    });
+    assert.equal(denied.status(), 401);
+  }
+  assert.equal(
+    (await desk.request.post(submissionsUrl, { multipart: upload })).status(),
+    401,
+  );
+  assert.equal(
+    (
+      await isolated`SELECT count(*)::int AS n FROM submissions WHERE team_id=${inviteTeam.id}`
+    )[0].n,
+    0,
+  );
+  const enabled = await desk.request.patch(
+    origin + '/api/admin/teams/' + inviteTeam.id,
+    {
+      data: {
+        name: inviteTeam.name,
+        members: [{ firstName: 'Kai', surname: 'Fern' }],
+        password: teamPassword,
+        revision: 0,
+      },
+    },
+  );
+  assert.equal(enabled.status(), 200);
+  await p.getByLabel('Team name', { exact: true }).fill(inviteTeam.name);
+  await p.locator('input[name=password]').fill(teamPassword);
+  await p.getByRole('button', { name: 'Log in' }).click();
   await p.getByLabel('Project title').fill('Invite submission');
   await p.getByLabel('Track', { exact: true }).selectOption('wallet');
   await p.getByLabel('Focus', { exact: true }).selectOption('wallet-A');
@@ -561,17 +616,6 @@ try {
     await p.request.get(origin + '/api/submissions')
   ).json();
   assert.equal(lateState.state, 'late');
-  const upload = {
-    code: invite,
-    method: 'file',
-    title: 'Late revision',
-    focus: 'tax-own',
-    file: {
-      name: 'proof.txt',
-      mimeType: 'text/plain',
-      buffer: Buffer.from('revision'),
-    },
-  };
   const lateResponse = await p.request.post(origin + '/api/submissions', {
     multipart: upload,
   });
@@ -611,8 +655,6 @@ try {
     );
 
   // Rehearse a jury observation and an equal-score podium using saved ballots.
-  const [inviteTeam] =
-    await isolated`SELECT id FROM teams WHERE name='Invite fixture'`;
   const [event] =
     await isolated`SELECT rubric FROM event_settings WHERE singleton`;
   const rubric = {
