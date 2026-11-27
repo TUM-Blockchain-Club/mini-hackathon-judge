@@ -291,15 +291,22 @@ try {
   assert.equal(listed.status(), 200);
   assert.equal(listed.headers()['cache-control'], 'private, no-store');
   assert.deepEqual(await listed.json(), [
-    { name: 'Solo_fixture', memberCount: 1 },
+    { name: 'Solo_fixture', memberCount: 1, members: soloProfile.members },
   ]);
   assert.deepEqual(await (await solo.request.get(directoryUrl)).json(), [
-    { name, memberCount: 2 },
+    {
+      name,
+      memberCount: 2,
+      members: [
+        { firstName: 'Jae', surname: 'Choi' },
+        { firstName: 'Ada', surname: 'Fern' },
+      ],
+    },
   ]);
   await p.getByRole('button', { name: 'Other teams' }).click();
   const list = p.getByRole('region', { name: 'Other teams' });
   await list.getByText('Solo_fixture').waitFor();
-  await list.getByText('1 member').waitFor();
+  await list.getByText('Sam Gray', { exact: true }).waitFor();
   assert.equal(await list.getByText(name, { exact: true }).count(), 0);
   // A pre-existing name with spaces remains usable, including for roster-only edits.
   await isolated`UPDATE teams SET name='Legacy team' WHERE id=${soloProfile.id}`;

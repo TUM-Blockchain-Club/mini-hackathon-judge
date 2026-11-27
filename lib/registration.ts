@@ -41,4 +41,6 @@ export type TeamProfile = {
   revision: number;
 };
 
-export type DirectoryTeam = { name: string; memberCount: number | null };
+export type DirectoryTeam = Pick<TeamProfile, 'name' | 'members'> & {
+  memberCount: number | null;
+};

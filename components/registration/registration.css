@@ -676,7 +676,8 @@
   gap: 4px 16px;
   padding-block: 7px;
 }
-.team-directory strong {
+.team-directory strong,
+.team-directory span {
   overflow-wrap: anywhere;
 }
 .team-directory span,

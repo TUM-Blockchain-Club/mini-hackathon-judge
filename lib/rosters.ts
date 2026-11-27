@@ -27,12 +27,17 @@ export async function listTeams(): Promise<TeamProfile[]> {
     TeamProfile[]
   >`SELECT t.id,t.name,COALESCE(p.members,'[]'::jsonb) AS members,COALESCE(p.revision,0) AS revision FROM teams t LEFT JOIN team_profiles p ON p.team_id=t.id ORDER BY lower(t.name),t.id`;
 }
-export async function otherTeams(teamId: string) {
-  return db()<
-    DirectoryTeam[]
-  >`SELECT t.name, jsonb_array_length(p.members) AS "memberCount"
+export async function otherTeams(teamId: string): Promise<DirectoryTeam[]> {
+  const teams = await db()<
+    Pick<TeamProfile, 'name' | 'members'>[]
+  >`SELECT t.name, COALESCE(p.members, '[]'::jsonb) AS members
     FROM teams t LEFT JOIN team_profiles p ON p.team_id=t.id
     WHERE t.id <> ${teamId} ORDER BY lower(t.name), t.id`;
+  return teams.map(({ name, members }) => ({
+    name,
+    memberCount: members.length || null,
+    members: members.map(({ firstName, surname }) => ({ firstName, surname })),
+  }));
 }
 
 export async function saveRoster(

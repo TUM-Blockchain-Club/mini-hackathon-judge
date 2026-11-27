@@ -47,12 +47,15 @@ export function TeamDirectory() {
           {teams.map((team) => (
             <li key={team.name}>
               <strong>{team.name}</strong>
-              {team.memberCount !== null && (
-                <span>
-                  {team.memberCount}{' '}
-                  {team.memberCount === 1 ? 'member' : 'members'}
-                </span>
-              )}
+              <span>
+                {team.members.length
+                  ? team.members
+                      .map(
+                        ({ firstName, surname }) => `${firstName} ${surname}`,
+                      )
+                      .join(', ')
+                  : 'Roster pending'}
+              </span>
             </li>
           ))}
         </ul>

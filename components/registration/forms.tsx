@@ -146,6 +146,7 @@ export function RosterForm({
         <h3>Team members</h3>
         <span>{members.length} / 3</span>
       </div>
+      <small>Other signed-in teams can see these first and last names.</small>
       <div className="reg-roster-fields">
         {members.map((m, i) => (
           <fieldset key={m.key}>
