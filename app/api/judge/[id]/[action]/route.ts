@@ -1,7 +1,13 @@
 import { z } from 'zod';
 import { officialCriteria } from '@/judge/official';
 import { jobName, verifyTicket, judgeModel } from '@/judge/cloud';
-import { planInspection, grade, type Run, type Evidence } from '@/judge/model';
+import {
+  planInspection,
+  grade,
+  validationDetail,
+  type Run,
+  type Evidence,
+} from '@/judge/model';
 import { db, InputError } from '@/lib/db';
 import { failure } from '@/lib/http';
 
@@ -82,9 +88,7 @@ export async function POST(
             ' check failed (' +
             status +
             '). ' +
-            (err instanceof Error
-              ? err.message.split('\n')[0].slice(0, 250)
-              : 'Invalid response'),
+            validationDetail(err),
           502,
         );
       }
