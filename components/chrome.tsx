@@ -24,7 +24,10 @@ export function Header({
           <span className="brand-sub">Hackathon Hub</span>
         </Link>
         <nav aria-label="Main navigation">
-          <Link href="/" aria-current={section === 'desk' ? 'page' : undefined}>
+          <Link
+            href="/submit"
+            aria-current={section === 'desk' ? 'page' : undefined}
+          >
             Submission desk
           </Link>
           <Link

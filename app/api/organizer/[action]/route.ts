@@ -1,6 +1,6 @@
 import { start } from 'workflow/api';
 import { judgeSubmission } from '@/judge/workflow';
-import { addTeam, configure, freezeBatch } from '@/lib/store';
+import { configure, freezeBatch } from '@/lib/store';
 import { sameOrigin, throttle, login, logout, signedIn } from '@/lib/auth';
 import { db, InputError } from '@/lib/db';
 import { failure } from '@/lib/http';
@@ -26,8 +26,6 @@ export async function POST(
     }
     const body = await request.json();
     switch (action) {
-      case 'team':
-        return Response.json({ code: await addTeam(String(body.name ?? '')) });
       case 'settings':
         await configure(String(body.deadline), body.rubric);
         break;

@@ -11,7 +11,13 @@ import {
 } from 'lucide-react';
 import { tracks, eventDate } from '@/lib/event';
 type Receipt = { id: string; team: string; date: string; digest: string };
-export function Submission({ state }: { state: string }) {
+export function Submission({
+  state,
+  teamName,
+}: {
+  state: string;
+  teamName?: string;
+}) {
   const [method, setMethod] = useState('github'),
     [track, setTrack] = useState(''),
     [busy, setBusy] = useState(false),
@@ -56,10 +62,7 @@ export function Submission({ state }: { state: string }) {
           <dt>File fingerprint (SHA-256)</dt>
           <dd>{receipt.digest}</dd>
         </dl>
-        <p>
-          You can replace this submission with your team code before the
-          deadline.
-        </p>
+        <p>You can replace this submission before the deadline.</p>
         <button
           className="button"
           onClick={() => {
@@ -93,16 +96,23 @@ export function Submission({ state }: { state: string }) {
       </div>
       <form onSubmit={submit}>
         <div className="fields">
-          <label>
-            Team access code
-            <input
-              name="code"
-              autoComplete="off"
-              placeholder="Code from your organizer"
-              required
-              maxLength={64}
-            />
-          </label>
+          {teamName ? (
+            <label>
+              Team
+              <input readOnly value={teamName} />
+            </label>
+          ) : (
+            <label>
+              Team access code
+              <input
+                name="code"
+                autoComplete="off"
+                placeholder="Code from your organizer"
+                required
+                maxLength={64}
+              />
+            </label>
+          )}
           <label>
             Project title
             <input

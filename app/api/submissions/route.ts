@@ -1,3 +1,4 @@
+import { currentTeam } from '@/lib/rosters';
 import { capture } from '@/lib/artifacts';
 import { publicEvent, requireTeam, saveSubmission } from '@/lib/store';
 import { sameOrigin, throttle } from '@/lib/auth';
@@ -14,7 +15,9 @@ export async function POST(request: Request) {
       throw new InputError('The submission window is closed.', 409);
     await throttle(request, 'submit', 100);
     const data = await request.formData(),
-      team = await requireTeam(String(data.get('code') ?? ''));
+      team =
+        (await currentTeam()) ??
+        (await requireTeam(String(data.get('code') ?? '')));
     const receipt = await saveSubmission(
       team.id,
       String(data.get('title') ?? ''),

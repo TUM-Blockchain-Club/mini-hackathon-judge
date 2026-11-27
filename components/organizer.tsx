@@ -95,7 +95,6 @@ export function Organizer({ data }: { data: Data }) {
     [busy, setBusy] = useState(''),
     [error, setError] = useState(''),
     [notice, setNotice] = useState(''),
-    [code, setCode] = useState(''),
     [deadline, setDeadline] = useState(''),
     [rubric, setRubric] = useState(() =>
       JSON.stringify(data.rubric ?? draftRubric, null, 2),
@@ -174,36 +173,14 @@ export function Organizer({ data }: { data: Data }) {
       )}
       <div className="admin-tools">
         <section className="panel">
-          <h2>Team access</h2>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const f = e.currentTarget;
-              act('team', { name: new FormData(f).get('name') }, (r) => {
-                setCode(String(r.code));
-                f.reset();
-              });
-            }}
-          >
-            <label>
-              Team name
-              <input
-                name="name"
-                placeholder="e.g. Wallet B"
-                required
-                maxLength={80}
-              />
-            </label>
-            <button disabled={!!busy || data.started} className="button">
-              Create team code
-            </button>
-          </form>
-          {code && (
-            <p className="notice">
-              Share this private code with the team.{' '}
-              <strong className="mono admin-code">{code}</strong>
-            </p>
-          )}
+          <h2>Team registration</h2>
+          <p>
+            Inspect registered teams, add members and update names in team
+            administration.
+          </p>
+          <a className="button" href="/admin">
+            Manage teams
+          </a>
         </section>
         <section className="panel">
           <h2>Judging batch</h2>

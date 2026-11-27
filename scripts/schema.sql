@@ -26,3 +26,17 @@ CREATE TABLE IF NOT EXISTS observations (
 CREATE TABLE IF NOT EXISTS login_attempts (
   bucket text PRIMARY KEY, starts timestamptz NOT NULL DEFAULT now(), attempts integer NOT NULL DEFAULT 1
 );
+
+-- An absent profile identifies a team created by the older invite-code desk.
+CREATE TABLE IF NOT EXISTS team_profiles (
+  team_id uuid PRIMARY KEY REFERENCES teams(id),
+  members jsonb NOT NULL CHECK (jsonb_typeof(members)='array' AND jsonb_array_length(members) BETWEEN 1 AND 3),
+  password_hash text NOT NULL,
+  revision integer NOT NULL DEFAULT 1 CHECK (revision > 0)
+);
+CREATE TABLE IF NOT EXISTS team_sessions (
+  token_hash text PRIMARY KEY,
+  team_id uuid NOT NULL REFERENCES team_profiles(team_id),
+  expires_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS team_sessions_expiry ON team_sessions(expires_at);

@@ -5,11 +5,11 @@ import '@fontsource/ibm-plex-mono/400.css';
 import './globals.css';
 export const metadata: Metadata = {
   title: {
-    default: 'Submission desk · TBC Hackathon Hub',
+    default: 'Mini Hackathon · Team registration',
     template: '%s · TBC Hackathon Hub',
   },
   description:
-    'Submit and evaluate projects for the LIGHT UP × TUM Blockchain Club mini hackathon.',
+    'Register a team for the LIGHT UP × TUM Blockchain Club mini hackathon.',
 };
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
