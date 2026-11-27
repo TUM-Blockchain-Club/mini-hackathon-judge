@@ -40,3 +40,32 @@ CREATE TABLE IF NOT EXISTS team_sessions (
   expires_at timestamptz NOT NULL
 );
 CREATE INDEX IF NOT EXISTS team_sessions_expiry ON team_sessions(expires_at);
+
+CREATE TABLE IF NOT EXISTS admin_accounts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL,
+  password_hash text NOT NULL, seat smallint UNIQUE CHECK (seat BETWEEN 1 AND 3)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS admin_name_unique ON admin_accounts(lower(name));
+CREATE TABLE IF NOT EXISTS admin_sessions (
+  token_hash text PRIMARY KEY, admin_id uuid NOT NULL REFERENCES admin_accounts,
+  expires_at timestamptz NOT NULL
+);
+CREATE TABLE IF NOT EXISTS pitch_ballots (
+  team_id uuid NOT NULL REFERENCES teams, admin_id uuid NOT NULL REFERENCES admin_accounts,
+  p1 smallint NOT NULL CHECK (p1 BETWEEN 0 AND 15), p2 smallint NOT NULL CHECK (p2 BETWEEN 0 AND 15),
+  p3 smallint NOT NULL CHECK (p3 BETWEEN 0 AND 10), p4 smallint NOT NULL CHECK (p4 BETWEEN 0 AND 10),
+  PRIMARY KEY(team_id,admin_id)
+);
+ALTER TABLE event_settings ADD COLUMN IF NOT EXISTS guide text;
+ALTER TABLE judge_runs ALTER COLUMN points TYPE double precision;
+ALTER TABLE submissions ADD COLUMN IF NOT EXISTS late boolean NOT NULL DEFAULT false;
+ALTER TABLE judge_runs ADD COLUMN IF NOT EXISTS jury_review jsonb;
+-- Existing cutoffs, frozen batches and legacy pitch totals are preserved.
+UPDATE event_settings SET deadline='2026-11-28 17:00:00+01' WHERE deadline IS NULL AND started_at IS NULL;
+CREATE TABLE IF NOT EXISTS podium_decisions (
+  signature text PRIMARY KEY, team_order jsonb NOT NULL, reason text NOT NULL
+);
+CREATE TABLE IF NOT EXISTS jury_decisions (
+  id bigserial PRIMARY KEY, run_id uuid NOT NULL REFERENCES judge_runs,
+  decision jsonb NOT NULL, recorded_at timestamptz NOT NULL DEFAULT now()
+);

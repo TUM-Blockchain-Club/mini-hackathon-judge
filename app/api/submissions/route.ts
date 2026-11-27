@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     if (Number(request.headers.get('content-length')) > 3.5 * 1024 * 1024)
       throw new InputError('Upload limit is 3 MiB.', 413);
     const event = await publicEvent();
-    if (event.state !== 'open')
+    if (event.state !== 'open' && event.state !== 'late')
       throw new InputError('The submission window is closed.', 409);
     await throttle(request, 'submit', 100);
     const data = await request.formData();

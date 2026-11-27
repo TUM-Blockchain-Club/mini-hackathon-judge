@@ -1,3 +1,10 @@
+import {
+  officialRubric,
+  officialVersion,
+  officialPoints,
+} from '../judge/official';
+import { trackGuide } from '../judge/guide';
+import { standings, type TieDecision } from './standings';
 import type { TeamRow } from './types';
 import { db, InputError } from './db';
 import { teamHash, newTeamCode } from './auth';
@@ -8,14 +15,17 @@ import { rubricSchema, type Rubric } from '../judge/rubric';
 export async function publicEvent() {
   try {
     const [e] =
-      await db()`SELECT deadline, started_at FROM event_settings WHERE singleton`;
+      await db()`SELECT deadline, deadline + interval '10 minutes' AS closes, started_at, clock_timestamp() AS stamp FROM event_settings WHERE singleton`;
     return {
       deadline: e.deadline?.toISOString() as string | undefined,
+      closes: e.closes?.toISOString() as string | undefined,
       state: !e.deadline
         ? 'pending'
-        : e.started_at || e.deadline <= new Date()
+        : e.started_at || e.closes < e.stamp
           ? 'closed'
-          : 'open',
+          : e.stamp > e.deadline
+            ? 'late'
+            : 'open',
     } as const;
   } catch {
     return { deadline: undefined, state: 'unavailable' } as const;
@@ -42,11 +52,16 @@ export async function saveSubmission(
       throw new InputError('Submissions are closed.', 409);
     const [s] =
       await tx`WITH stamp AS MATERIALIZED (SELECT clock_timestamp() AS accepted_at)
-      INSERT INTO submissions(team_id,title,focus,source,filename,content,digest,submitted_at)
-      SELECT ${team},${title.trim()},${focus},${data.source},${data.filename},${data.bytes},${data.hash},accepted_at FROM stamp
-      WHERE accepted_at < ${e.deadline} RETURNING id,submitted_at,digest`;
+      INSERT INTO submissions(team_id,title,focus,source,filename,content,digest,submitted_at,late)
+      SELECT ${team},${title.trim()},${focus},${data.source},${data.filename},${data.bytes},${data.hash},accepted_at,accepted_at > ${e.deadline} FROM stamp
+      WHERE accepted_at <= ${e.deadline}::timestamptz + interval '10 minutes' RETURNING id,submitted_at,digest,late`;
     if (!s) throw new InputError('The deadline has passed.', 409);
-    return { id: s.id, date: s.submitted_at.toISOString(), digest: s.digest };
+    return {
+      id: s.id,
+      date: s.submitted_at.toISOString(),
+      digest: s.digest,
+      late: s.late,
+    };
   });
 }
 export async function configure(deadline: string, raw: unknown) {
@@ -61,10 +76,19 @@ export async function configure(deadline: string, raw: unknown) {
     if (event.started_at)
       throw new InputError('Settings are locked for this batch.', 409);
     const later =
-      await tx`SELECT id FROM submissions WHERE submitted_at>=${date} LIMIT 1`;
+      await tx`SELECT id FROM submissions WHERE submitted_at > ${date}::timestamptz + interval '10 minutes' LIMIT 1`;
     if (later.length)
       throw new InputError(
-        'Choose a deadline after the latest accepted receipt.',
+        'The final cutoff would exclude an accepted receipt.',
+        409,
+      );
+    if (
+      (
+        await tx`SELECT 1 FROM submissions WHERE late IS DISTINCT FROM (submitted_at > ${date}) LIMIT 1`
+      ).length
+    )
+      throw new InputError(
+        'This deadline would change the penalty on an accepted receipt.',
         409,
       );
     await tx`UPDATE event_settings SET deadline=${date},rubric=${tx.json(parsed.data)} WHERE singleton`;
@@ -83,14 +107,14 @@ export async function addTeam(name: string) {
     );
   return code;
 }
-export async function freezeBatch() {
+export async function freezeBatch(officialOnly = false) {
   return db().begin(async (tx) => {
     const [e] =
       await tx`SELECT *, clock_timestamp() AS stamp FROM event_settings WHERE singleton FOR UPDATE`;
     if (!e.started_at) {
-      if (!e.deadline || e.stamp < e.deadline)
+      if (!e.deadline || +e.stamp <= +e.deadline + 600_000)
         throw new InputError(
-          'Judging opens after the submission deadline.',
+          'Judging opens after the late submission window.',
           409,
         );
       if (
@@ -104,14 +128,28 @@ export async function freezeBatch() {
           'Configure the judge model, gateway access and sandbox snapshot before starting.',
           503,
         );
-      const rubric = rubricSchema.parse(e.rubric);
+      const rubric = e.rubric ? rubricSchema.parse(e.rubric) : officialRubric;
+      const official = rubric.version === officialVersion;
+      if (officialOnly && !official)
+        throw new InputError(
+          'Import the approved guide before starting official judging.',
+          409,
+        );
+      if (official && !e.guide)
+        throw new InputError(
+          'Import the confidential judging guide before starting.',
+          409,
+        );
       const subs =
-        await tx`SELECT DISTINCT ON(team_id) id,focus FROM submissions WHERE submitted_at<${e.deadline} ORDER BY team_id,submitted_at DESC,id DESC`;
+        await tx`SELECT DISTINCT ON(team_id) id,focus FROM submissions WHERE submitted_at <= ${e.deadline}::timestamptz + interval '10 minutes' ORDER BY team_id,submitted_at DESC,id DESC`;
       if (!subs.length)
         throw new InputError('No submissions are available to judge.', 409);
       for (const s of subs) {
-        const rules = [...rubric.common, ...rubric.focuses[s.focus]];
-        await tx`INSERT INTO judge_runs(submission_id,until_at,rubric,model,snapshot) VALUES(${s.id},${new Date(+e.stamp + 900_000)},${tx.json({ version: rubric.version, criteria: rules })},${process.env.JUDGE_MODEL},${process.env.JUDGE_SNAPSHOT_ID})`;
+        const rules = official
+          ? officialRubric.common
+          : [...rubric.common, ...(rubric.focuses[s.focus] ?? [])];
+        const guide = official ? trackGuide(e.guide, s.focus) : undefined;
+        await tx`INSERT INTO judge_runs(submission_id,until_at,rubric,model,snapshot) VALUES(${s.id},${new Date(+e.stamp + 900_000)},${tx.json({ version: rubric.version, criteria: rules, ...(guide ? { guide } : {}) })},${process.env.JUDGE_MODEL},${process.env.JUDGE_SNAPSHOT_ID})`;
       }
       await tx`UPDATE event_settings SET started_at=${e.stamp},model=${process.env.JUDGE_MODEL},snapshot=${process.env.JUDGE_SNAPSHOT_ID} WHERE singleton`;
     }
@@ -120,23 +158,36 @@ export async function freezeBatch() {
     return jobs.map((j) => String(j.id));
   });
 }
-export async function desk() {
+export async function desk(adminId: string | null = null) {
   const sql = db();
   await sql`UPDATE judge_runs SET phase='review',issue='The 15-minute deadline elapsed before a valid scorecard was saved.' WHERE until_at<=clock_timestamp() AND phase NOT IN ('complete','review')`;
-  const [events, teams] = await Promise.all([
-    sql`SELECT * FROM event_settings WHERE singleton`,
+  const [[event], teams, decisions] = await Promise.all([
+    sql`SELECT deadline,started_at,rubric,guide IS NOT NULL AS guide_ready FROM event_settings WHERE singleton`,
     sql<
       TeamRow[]
-    >`SELECT t.id,t.name,t.pitch,s.id AS submission,s.title,s.focus,s.digest,s.filename,s.submitted_at::text,
-    j.id AS run_id,j.phase,j.points,j.issue,j.rubric,j.scorecard FROM teams t
-    LEFT JOIN LATERAL (SELECT id,title,focus,digest,filename,submitted_at FROM submissions WHERE team_id=t.id ORDER BY submitted_at DESC,id DESC LIMIT 1) s ON true
-    LEFT JOIN judge_runs j ON j.submission_id=s.id ORDER BY (j.points+t.pitch) DESC NULLS LAST,j.points DESC NULLS LAST,t.name`,
+    >`SELECT t.id,t.name,t.pitch AS legacy_pitch,b.ballots,b.pitch_sum,b.my_ballot,
+      s.id AS submission,s.title,s.focus,s.digest,s.source,s.filename,s.submitted_at::text,s.late,
+      j.id AS run_id,j.phase,j.points,j.issue,j.rubric->'guide'->>'revision' AS guide_revision,j.rubric-'guide' AS rubric,j.scorecard,j.jury_review,coalesce((SELECT jsonb_agg(d.decision ORDER BY d.id) FROM jury_decisions d WHERE d.run_id=j.id),'[]'::jsonb) AS history
+      FROM teams t LEFT JOIN LATERAL (SELECT * FROM submissions WHERE team_id=t.id ORDER BY submitted_at DESC,id DESC LIMIT 1) s ON true
+      LEFT JOIN judge_runs j ON j.submission_id=s.id
+      CROSS JOIN LATERAL (SELECT count(*)::int AS ballots,coalesce(sum(p1+p2+p3+p4),0)::int AS pitch_sum,
+       (jsonb_agg(to_jsonb(v)-'admin_id'-'team_id') FILTER (WHERE admin_id=${adminId}::uuid))->0 AS my_ballot
+       FROM pitch_ballots v WHERE v.team_id=t.id) b`,
+    sql<TieDecision[]>`SELECT * FROM podium_decisions`,
   ]);
-  const e = events[0];
+  for (const t of teams) {
+    if (t.jury_review && t.scorecard && 'efficiencyApplicable' in t.scorecard) {
+      const rows = t.scorecard.rows.map((r) =>
+        r.id === 'S1' ? { ...r, points: t.jury_review!.correctness } : r,
+      );
+      t.points = officialPoints({ rows }, t.scorecard.efficiencyApplicable);
+    }
+  }
   return {
-    deadline: e.deadline?.toISOString() as string | undefined,
-    started: !!e.started_at,
-    rubric: e.rubric as Rubric | null,
-    teams: Array.from(teams),
+    deadline: event.deadline?.toISOString() as string | undefined,
+    started: !!event.started_at,
+    guideReady: !!event.guide_ready,
+    rubric: (event.rubric ?? officialRubric) as Rubric,
+    teams: standings(teams, decisions),
   };
 }

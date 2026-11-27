@@ -248,23 +248,105 @@ try {
   });
   await p.getByRole('button', { name: 'Submit project' }).click();
   await p.getByText('Project received.').waitFor();
+  const voterPassword = 'ballot-fixture-password';
+  const guidePath =
+    process.env.TEST_JUDGING_GUIDE_FILE ||
+    new URL('../tests/fixtures/jury-guide.md', import.meta.url);
+  const guideBytes = await readFile(guidePath);
+  assert.equal(
+    (await p.request.get(origin + '/api/organizer/guide')).status(),
+    401,
+  );
+  await desk.getByLabel('Confidential judging guide').setInputFiles({
+    name: 'guide.md',
+    mimeType: 'text/markdown',
+    buffer: guideBytes,
+  });
+  await desk.getByRole('button', { name: 'Import guide' }).click();
+  await desk.getByText('Private guide imported.').waitFor();
+  assert.equal(
+    await (await desk.request.get(origin + '/api/organizer/guide')).text(),
+    guideBytes.toString(),
+  );
+  await desk.getByText('Admins and jury seats', { exact: true }).click();
+  await desk.getByLabel('New admin name').fill('Event helper');
+  await desk.getByLabel('Initial password').fill(voterPassword);
+  await desk.getByRole('button', { name: 'Create admin' }).click();
+  await desk.getByText('Admin account created.').waitFor();
+  const helper = await browser.newContext();
+  const api = '/api/organizer/';
+  assert.equal(
+    (
+      await helper.request.post(origin + api + 'login', {
+        data: { name: 'Event helper', password: voterPassword },
+      })
+    ).status(),
+    200,
+  );
+  assert.equal(
+    (await helper.request.get(origin + '/api/admin/teams')).status(),
+    200,
+  );
+  assert.equal(
+    (await helper.request.get(origin + api + 'guide')).status(),
+    403,
+  );
+  assert.equal(
+    (await helper.request.post(origin + api + 'admin', { data: {} })).status(),
+    403,
+  );
+  assert.equal(
+    (
+      await helper.request.post(origin + api + 'pitch', {
+        data: { team: me.id, p1: 10, p2: 10, p3: 9, p4: 9 },
+      })
+    ).status(),
+    403,
+  );
+  await helper.close();
+  for (const seat of [1, 2, 3]) {
+    const judgeName = 'Judge ' + seat;
+    assert.equal(
+      (
+        await desk.request.post(origin + api + 'admin', {
+          data: { name: judgeName, password: voterPassword, seat },
+        })
+      ).status(),
+      200,
+    );
+    const j = await browser.newPage();
+    await j.goto(origin + '/organizer');
+    await j.getByLabel('Admin name').fill(judgeName);
+    await j.getByLabel('Organizer password').fill(voterPassword);
+    await j.getByRole('button', { name: 'Sign in' }).click();
+    const row = j.locator('article').filter({ hasText: name });
+    for (const [id, points] of Object.entries({ p1: 10, p2: 10, p3: 9, p4: 9 }))
+      await row.locator('input[name=' + id + ']').fill(String(points));
+    await row.getByRole('button', { name: 'Save pitch' }).click();
+    await j.getByText('Pitch score saved.').waitFor();
+    await row
+      .getByText(
+        seat === 3
+          ? 'Pitch 38/50 · 3/3 ballots'
+          : 'Pitch pending · ' + seat + '/3 ballots',
+      )
+      .waitFor();
+    assert.equal((await j.request.get(origin + api + 'guide')).status(), 200);
+    assert.equal(
+      (await j.request.post(origin + api + 'settings', { data: {} })).status(),
+      403,
+    );
+    await j.close();
+  }
+  assert.equal(
+    (
+      await desk.request.post(origin + api + 'admin', {
+        data: { name: 'Fourth voter', password: voterPassword, seat: 1 },
+      })
+    ).status(),
+    409,
+  );
   await desk.reload();
-  await desk
-    .locator('article')
-    .filter({ hasText: name })
-    .getByLabel('Pitch points')
-    .fill('38');
-  await desk
-    .locator('article')
-    .filter({ hasText: name })
-    .getByRole('button', { name: 'Save pitch' })
-    .click();
-  await desk.getByText('Pitch score saved.').waitFor();
-  await desk
-    .locator('article')
-    .filter({ hasText: name })
-    .getByText('Pitch 38/50')
-    .waitFor();
   const link = await desk
     .locator('article')
     .filter({ hasText: name })
@@ -297,9 +379,144 @@ try {
   await p.getByText('Project received.').waitFor();
   await p.getByText('Invite fixture ·', { exact: false }).waitFor();
   assert.equal(new URL(p.url()).pathname, '/submit');
+  // Advance only this isolated event through its late window.
+  await isolated`UPDATE event_settings SET deadline=clock_timestamp()-interval '4 minutes'`;
+  const lateState = await (
+    await p.request.get(origin + '/api/submissions')
+  ).json();
+  assert.equal(lateState.state, 'late');
+  const upload = {
+    code: invite,
+    method: 'file',
+    title: 'Late revision',
+    focus: 'tax-own',
+    file: {
+      name: 'proof.txt',
+      mimeType: 'text/plain',
+      buffer: Buffer.from('revision'),
+    },
+  };
+  const lateResponse = await p.request.post(origin + '/api/submissions', {
+    multipart: upload,
+  });
+  assert.equal(lateResponse.status(), 201);
+  assert.equal((await lateResponse.json()).late, true);
+  await isolated`UPDATE event_settings SET deadline=clock_timestamp()-interval '11 minutes'`;
+  assert.equal(
+    (
+      await p.request.post(origin + '/api/submissions', { multipart: upload })
+    ).status(),
+    409,
+  );
+  assert.equal(
+    (await (await p.request.get(origin + '/api/submissions')).json()).state,
+    'closed',
+  );
+  assert.equal(
+    (
+      await desk.request.post(origin + api + 'pitch', {
+        data: { team: me.id, p1: 15, p2: 15, p3: 10, p4: 10 },
+      })
+    ).status(),
+    403,
+  );
+  for (let i = 0; i < 3; i++)
+    assert.equal(
+      (
+        await desk.request.post(origin + api + 'admin', {
+          data: {
+            name: 'Extra admin ' + i,
+            password: voterPassword,
+            seat: null,
+          },
+        })
+      ).status(),
+      200,
+    );
+
+  // Rehearse a jury observation and an equal-score podium using saved ballots.
+  const [inviteTeam] =
+    await isolated`SELECT id FROM teams WHERE name='Invite fixture'`;
+  const [event] =
+    await isolated`SELECT rubric FROM event_settings WHERE singleton`;
+  const rubric = {
+    version: event.rubric.version,
+    criteria: event.rubric.common,
+  };
+  const ev = [{ ref: 'I01-1', location: 'proof.txt line 1' }];
+  const scorecard = {
+    rows: rubric.criteria.map((c) => ({
+      id: c.id,
+      points: c.max / 2,
+      reason: 'Synthetic check',
+      evidence: ev,
+    })),
+    efficiencyApplicable: true,
+    checks: [
+      {
+        id: 'R0-1',
+        checked: 'Inspect fixture',
+        result: 'Found',
+        label: 'claimed only',
+        credit: 'half',
+        effect: 'Pending demo',
+        violation: false,
+        evidence: ev,
+      },
+    ],
+    juryQuestions: ['Reproduce the fixture.'],
+  };
+  for (const id of [me.id, inviteTeam.id]) {
+    const [sub] =
+      await isolated`SELECT id FROM submissions WHERE team_id=${id} ORDER BY submitted_at DESC LIMIT 1`;
+    await isolated`INSERT INTO judge_runs(submission_id,phase,until_at,rubric,model,snapshot,scorecard,points)
+      VALUES(${sub.id},'complete',now(),${isolated.json(rubric)},'fixture','fixture',${isolated.json(scorecard)},25)`;
+  }
+  await isolated`INSERT INTO pitch_ballots(team_id,admin_id,p1,p2,p3,p4)
+    SELECT ${inviteTeam.id},admin_id,15,10,9,9 FROM pitch_ballots WHERE team_id=${me.id}`;
+  await desk.reload();
+  const invitedRow = desk
+    .locator('article')
+    .filter({
+      has: desk.getByRole('heading', { name: 'Invite fixture', exact: true }),
+    });
+  await invitedRow.getByText('Place 1', { exact: true }).waitFor();
+  await invitedRow.getByText('Overall 63%').waitFor();
+  // Equalize the pitch and submission components to trigger an unresolved tie.
+  await isolated`UPDATE pitch_ballots SET p1=10 WHERE team_id=${inviteTeam.id}`;
+  await isolated`UPDATE judge_runs SET points=30 WHERE submission_id IN (SELECT id FROM submissions WHERE team_id=${inviteTeam.id})`;
+  await desk.reload();
+  await invitedRow.getByText('Podium tie · jury decision needed').waitFor();
+  const tieForm = desk.locator('details').filter({
+    has: desk.locator('summary', { hasText: 'Record jury tie decision' }),
+  });
+  await desk.getByText('Record jury tie decision', { exact: true }).click();
+  await tieForm.getByLabel('Tied team in position 1').selectOption(me.id);
+  await tieForm
+    .getByLabel('Tied team in position 2')
+    .selectOption(inviteTeam.id);
+  await tieForm
+    .getByLabel('Jury rationale')
+    .fill('Jury selected the more useful demonstration.');
+  await desk.getByRole('button', { name: 'Save tie decision' }).click();
+  await invitedRow.getByText('Place 2', { exact: true }).waitFor();
+  await invitedRow
+    .locator('summary')
+    .filter({ hasText: 'AI scorecard' })
+    .click();
+  await invitedRow.getByLabel('Reviewed correctness').selectOption('20');
+  await invitedRow
+    .getByLabel('Jury observation and rationale')
+    .fill('Jury reproduced the worked example.');
+  await invitedRow.getByRole('button', { name: 'Record decision' }).click();
+  await invitedRow.getByText('Place 1', { exact: true }).waitFor();
+  assert.equal(
+    (await isolated`SELECT count(*)::int n FROM jury_decisions`)[0].n,
+    1,
+  );
   assert.deepEqual(errors, []);
   console.log(
-    'Browser pass: registration, roster bounds, duplicate rejection, login/logout, team isolation, admin create/inspect/edit, single-page submissions, revisions, legacy links and mobile layout.',
+    'Browser pass: registration, roster bounds, duplicate rejection, login/logout, team isolation, admin create/inspect/edit, submission revisions, legacy links, mobile layout, private guide, jury seats, late cutoff, ballots, demo review and podium ties.',
   );
 } finally {
   await browser?.close();

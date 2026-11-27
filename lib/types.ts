@@ -1,18 +1,36 @@
 import type { Card, Criterion } from '../judge/rubric';
+import type { OfficialCard } from '../judge/official';
+export type Review = {
+  requirement: string;
+  label: 'observed in demo' | 'contradicted' | 'unverified';
+  note: string;
+  correctness: number;
+  disqualified: boolean;
+  by: string;
+};
 export type TeamRow = {
   id: string;
   name: string;
   pitch: number | null;
+  legacy_pitch: number | null;
+  ballots: number;
+  pitch_sum: number;
+  my_ballot: { p1: number; p2: number; p3: number; p4: number } | null;
   submission: string | null;
   title: string | null;
   focus: string | null;
   digest: string | null;
+  source: string | null;
   filename: string | null;
   submitted_at: string | null;
+  late: boolean | null;
   run_id: string | null;
   phase: string | null;
   points: number | null;
   issue: string | null;
+  guide_revision?: string | null;
   rubric: { version: string; criteria: Criterion[] } | null;
-  scorecard: Card | null;
+  scorecard: Card | OfficialCard | null;
+  jury_review: Review | null;
+  history: Review[];
 };

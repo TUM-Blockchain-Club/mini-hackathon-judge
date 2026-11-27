@@ -6,7 +6,8 @@ const virtualTime = new AsyncLocalStorage<{ now: number }>();
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { judgeSubmission } from '../judge/workflow';
-import { draftRubric } from '../judge/rubric';
+import { officialRubric } from '../judge/official';
+import { importGuide } from '../judge/guide';
 import {
   addTeam,
   configure,
@@ -83,9 +84,21 @@ vi.mock('ai', async (load) => {
       }
       return {
         output: {
+          checks: input.guide.ids.map((id: string) => ({
+            id,
+            checked: 'Read fixture',
+            result: 'Fixture agrees',
+            label: 'independently verified',
+            credit: 'full',
+            effect: 'Supports S1',
+            violation: false,
+            evidence: [{ ref: 'V01-1', location: 'result.md line 1' }],
+          })),
+          juryQuestions: ['Repeat the fixture check live.'],
+          efficiencyApplicable: true,
           rows: input.criteria.map((c: { id: string; max: number }) => ({
             id: c.id,
-            points: c.max - 1,
+            points: c.max / 2,
             reason: 'A fixture result was reproduced.',
             evidence: [{ ref: 'V01-1', location: 'result.md, line 1' }],
           })),
@@ -122,7 +135,11 @@ afterAll(async () => {
   }
 });
 it('starts eleven independent judges and saves one evidence-backed scorecard per frozen submission', async () => {
-  await configure(new Date(Date.now() + 30_000).toISOString(), draftRubric);
+  const guidePath =
+    process.env.TEST_JUDGING_GUIDE_FILE ||
+    new URL('./fixtures/jury-guide.md', import.meta.url);
+  await importGuide(await readFile(guidePath, 'utf8'));
+  await configure(new Date(Date.now() + 30_000).toISOString(), officialRubric);
   await Promise.all(
     Array.from({ length: 11 }, async (_, i) => {
       const t = await requireTeam(await addTeam('Fixture ' + i));
@@ -135,7 +152,8 @@ it('starts eleven independent judges and saves one evidence-backed scorecard per
     }),
   );
   await new Promise((resolve) => setTimeout(resolve, 5));
-  await configure(new Date().toISOString(), draftRubric);
+  await db()`UPDATE submissions SET submitted_at=submitted_at-interval '12 minutes'`;
+  await configure(new Date(Date.now() - 601000).toISOString(), officialRubric);
   const ids = await freezeBatch();
   fake.now = Date.now();
   vi.spyOn(Date, 'now').mockImplementation(
@@ -151,7 +169,7 @@ it('starts eleven independent judges and saves one evidence-backed scorecard per
   expect([...fake.boxes.values()].every((b) => b.closed)).toBe(true);
   for (const t of result.teams) {
     expect(t.phase, t.issue ?? 'run finished').toBe('complete');
-    expect(t.points).toBe(46);
+    expect(t.points).toBe(25);
     expect(t.scorecard?.rows.length).toBe(4);
     const obs =
       await db()`SELECT output FROM observations WHERE run_id=${t.run_id} AND ref='V01-1'`;

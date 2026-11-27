@@ -1,10 +1,10 @@
-import { signedIn } from '@/lib/auth';
+import { juryAccess } from '@/lib/auth';
 import { db } from '@/lib/db';
 export async function GET(
   _req: Request,
   { params }: RouteContext<'/api/evidence/[id]'>,
 ) {
-  if (!(await signedIn())) return new Response(null, { status: 401 });
+  if (!(await juryAccess())) return new Response(null, { status: 401 });
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) return new Response(null, { status: 404 });
   const evidence =

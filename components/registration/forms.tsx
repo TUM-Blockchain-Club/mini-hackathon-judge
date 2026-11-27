@@ -241,18 +241,16 @@ export function LoginForm({
           : 'Use the team name and password from registration.'}
       </p>
       <form className="reg-form" onSubmit={submit}>
-        {!admin && (
-          <label>
-            Team name
-            <input
-              name="name"
-              required
-              maxLength={80}
-              autoComplete="username"
-              placeholder="Your team name"
-            />
-          </label>
-        )}
+        <label>
+          {admin ? 'Admin name' : 'Team name'}
+          <input
+            name="name"
+            required={!admin}
+            maxLength={80}
+            autoComplete="username"
+            placeholder={admin ? 'Organizer' : 'Your team name'}
+          />
+        </label>
         <PasswordField create={false} />
         {error && (
           <p className="reg-error" role="alert">

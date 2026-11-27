@@ -1,7 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { tracks, eventDate } from '@/lib/event';
-type Receipt = { id: string; team: string; date: string; digest: string };
+type Receipt = {
+  id: string;
+  team: string;
+  date: string;
+  digest: string;
+  late: boolean;
+};
 export function Submission({
   state,
   teamId,
@@ -18,7 +24,7 @@ export function Submission({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [receipt, setReceipt] = useState<Receipt | null>(null);
-  const open = state === 'open';
+  const open = state === 'open' || state === 'late';
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!open || (!teamId && !useCode) || busy) return;
@@ -54,6 +60,9 @@ export function Submission({
         <p>
           Receipt ID <code>{receipt.id}</code>
         </p>
+        {receipt.late && (
+          <p>Late submission · 5 points deducted from the overall score.</p>
+        )}
         <details>
           <summary>File fingerprint (SHA-256)</summary>
           <code>{receipt.digest}</code>
@@ -118,6 +127,9 @@ export function Submission({
                   {'ABC'[i]} · {f}
                 </option>
               ))}
+            {track && (
+              <option value={track + '-own'}>Own topic in this track</option>
+            )}
           </select>
         </label>
       </div>
@@ -181,9 +193,11 @@ export function Submission({
               ? 'Submissions have not opened yet.'
               : state === 'unavailable'
                 ? 'The submission service is unavailable.'
-                : open && !teamId && !useCode
-                  ? 'Choose a team access option to submit.'
-                  : ''}
+                : state === 'late'
+                  ? 'Submitting now applies the 5-point late deduction.'
+                  : open && !teamId && !useCode
+                    ? 'Choose a team access option to submit.'
+                    : ''}
         </small>
       </div>
     </form>

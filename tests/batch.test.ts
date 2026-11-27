@@ -59,7 +59,8 @@ test(
       );
       await assert.rejects(freezeBatch());
       await new Promise((resolve) => setTimeout(resolve, 5));
-      await configure(new Date().toISOString(), draftRubric);
+      await db()`UPDATE submissions SET submitted_at=submitted_at-interval '12 minutes'`;
+      await configure(new Date(Date.now() - 601000).toISOString(), draftRubric);
       await assert.rejects(
         saveSubmission(teams[0].id, 'Late', 'wallet-A', data),
       );

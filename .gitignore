@@ -9,3 +9,6 @@ node_modules/
 .workflow-data/
 .21st/
 /.swc
+
+# Confidential jury material is imported into the event database.
+LIGHTUP-TBC-Internal-Judging-Guide.md

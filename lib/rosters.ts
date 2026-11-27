@@ -1,5 +1,5 @@
-import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
-import { promisify } from 'node:util';
+import { randomBytes } from 'node:crypto';
+import { hashPassword, matchesPassword } from './passwords';
 import { cookies } from 'next/headers';
 import { db, InputError } from './db';
 import { newTeamCode, teamHash } from './auth';
@@ -12,19 +12,12 @@ import {
 } from './registration';
 import type { z } from 'zod';
 
-const derive = promisify(scrypt);
 const cookieName = 'tbc_team';
 const sessionSeconds = 7 * 24 * 3600;
 function parse<T>(schema: z.ZodType<T>, input: unknown) {
   const result = schema.safeParse(input);
   if (!result.success) throw new InputError(result.error.issues[0].message);
   return result.data;
-}
-async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString('hex');
-  return (
-    salt + ':' + ((await derive(password, salt, 64)) as Buffer).toString('hex')
-  );
 }
 export async function listTeams(): Promise<TeamProfile[]> {
   const sql = db();
@@ -87,11 +80,7 @@ export async function authenticateTeam(input: unknown) {
     sql = db();
   const [p] =
     await sql`SELECT t.id,p.password_hash FROM teams t JOIN team_profiles p ON p.team_id=t.id WHERE lower(t.name)=lower(${data.name})`;
-  const [salt, expected] = String(
-    p?.password_hash ?? '00000000000000000000000000000000:' + '0'.repeat(128),
-  ).split(':');
-  const key = (await derive(data.password, salt, 64)) as Buffer;
-  if (!timingSafeEqual(key, Buffer.from(expected, 'hex')) || !p)
+  if (!(await matchesPassword(data.password, p?.password_hash)))
     throw new InputError('Check your team name and password.', 401);
   const token = randomBytes(32).toString('hex');
   await sql`INSERT INTO team_sessions(token_hash,team_id,expires_at) VALUES(${digest(token)},${p.id},now()+interval '7 days')`;

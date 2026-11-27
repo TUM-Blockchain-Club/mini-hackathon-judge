@@ -5,8 +5,9 @@ import { Submission } from './submission';
 import { eventDate } from '@/lib/event';
 
 type Desk = {
-  state: 'open' | 'closed' | 'pending' | 'unavailable';
+  state: 'open' | 'late' | 'closed' | 'pending' | 'unavailable';
   deadline?: string;
+  closes?: string;
   team: { id: string; name: string } | null;
 };
 type Access = 'idle' | 'login' | 'signup' | 'code';
@@ -48,10 +49,16 @@ export function SubmissionDesk() {
     };
   }, [refresh]);
   useEffect(() => {
-    if (desk?.state !== 'open' || !desk.deadline) return;
+    const next =
+      desk?.state === 'open'
+        ? desk.deadline
+        : desk?.state === 'late'
+          ? desk.closes
+          : undefined;
+    if (!next) return;
     const ms = Math.min(
       2_147_000_000,
-      Math.max(1000, Date.parse(desk.deadline) - Date.now() + 500),
+      Math.max(1000, Date.parse(next) - Date.now() + 500),
     );
     const timer = setTimeout(refresh, ms);
     return () => clearTimeout(timer);
@@ -78,6 +85,13 @@ export function SubmissionDesk() {
       {desk?.deadline && (
         <p className="submission-deadline">
           Submission deadline <strong>{eventDate(desk.deadline)}</strong>
+          {desk.closes && (
+            <>
+              {' '}
+              · Late entries through {eventDate(desk.closes)} incur a 5-point
+              deduction.
+            </>
+          )}
         </p>
       )}
       <div className="submission-team">

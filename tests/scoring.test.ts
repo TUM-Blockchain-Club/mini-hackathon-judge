@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { draftRubric, rubricSchema, scoreCard } from '../judge/rubric';
 import { digest, inspectFile, capture } from '../lib/artifacts';
 
-test('the nine focuses share the 50-point scale and reject duplicate criteria', () => {
+test('the nine focuses and three own-topic options share the 50-point scale and reject duplicate criteria', () => {
   const r = rubricSchema.parse(draftRubric);
-  assert.equal(Object.keys(r.focuses).length, 9);
+  assert.equal(Object.keys(r.focuses).length, 12);
   const bad = structuredClone(r);
   bad.common[1].id = bad.common[0].id;
   assert.equal(rubricSchema.safeParse(bad).success, false);

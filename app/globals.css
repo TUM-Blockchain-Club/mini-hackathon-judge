@@ -892,3 +892,16 @@ details > div {
     display: none;
   }
 }
+
+.ballot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  gap: 14px;
+}
+.team-row code {
+  overflow-wrap: anywhere;
+}
+.team-row input[type='checkbox'] {
+  width: auto;
+  min-height: 0;
+}

@@ -20,6 +20,7 @@ export const rubricSchema = z
     if (Object.keys(r.focuses).some((k) => !Object.hasOwn(focuses, k)))
       ctx.addIssue({ code: 'custom', message: 'Unknown focus.' });
     for (const key of Object.keys(focuses)) {
+      if (key.endsWith('-own') && !Object.hasOwn(r.focuses, key)) continue;
       const rules = [...r.common, ...(r.focuses[key] ?? [])];
       if (
         !Object.hasOwn(r.focuses, key) ||
@@ -76,7 +77,7 @@ export const draftRubric: Rubric = {
 };
 export const rowSchema = z.object({
   id: z.string(),
-  points: z.number().int().nonnegative(),
+  points: z.number().nonnegative(),
   reason: z.string().trim().min(1).max(1600),
   evidence: z
     .array(
@@ -94,6 +95,7 @@ export function scoreCard(
   criteria: Criterion[],
   card: Card,
   refs: Set<string>,
+  fractional = false,
 ) {
   cardSchema.parse(card);
   if (
@@ -104,7 +106,12 @@ export function scoreCard(
   let points = 0;
   for (const c of criteria) {
     const r = card.rows.find((r) => r.id === c.id);
-    if (!r || r.points > c.max || r.evidence.some((e) => !refs.has(e.ref)))
+    if (
+      !r ||
+      (!fractional && !Number.isInteger(r.points)) ||
+      r.points > c.max ||
+      r.evidence.some((e) => !refs.has(e.ref))
+    )
       throw Error(`Invalid points or evidence for ${c.id}.`);
     points += r.points;
   }
