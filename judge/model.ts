@@ -1,4 +1,5 @@
 import { generateText, Output } from 'ai';
+import { InputError } from '../lib/db';
 import { z } from 'zod';
 import { cardSchema, scoreCard, type Criterion } from './rubric';
 import { officialCardSchema, validateOfficial } from './official';
@@ -20,6 +21,29 @@ export function timeLeft(until: number, cap: number) {
   const left = Math.min(cap, until - Date.now());
   if (left < 1500) throw Error('Judging time exhausted.');
   return left;
+}
+
+// A live model request runs before the batch clock starts. It carries no event data.
+export async function checkModelAccess(model: string) {
+  try {
+    await generateText({
+      model,
+      prompt: 'Reply OK.',
+      maxRetries: 0,
+      maxOutputTokens: 32,
+      abortSignal: AbortSignal.timeout(15_000),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    const detail = message
+      .split('\n')[0]
+      .replace(/(?:Bearer\s+|(?:sk-|eyJ))[A-Za-z0-9._-]+/gi, '[redacted]')
+      .slice(0, 360);
+    throw new InputError(
+      'AI Gateway could not start ' + model + '. ' + detail,
+      503,
+    );
+  }
 }
 
 export type Evidence = { ref: string; command: string; output: string };

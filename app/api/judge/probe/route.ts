@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
-import { cloudLauncher } from '@/judge/cloud';
+import { checkModelAccess } from '@/judge/model';
+import { cloudLauncher, judgeModel } from '@/judge/cloud';
 import { db, InputError } from '@/lib/db';
 import { failure } from '@/lib/http';
 
@@ -28,11 +29,30 @@ export async function POST(request: Request) {
       verified.payload.email_verified !== true
     )
       throw new InputError('Invalid cloud operator identity.', 403);
+    const url = new URL(request.url);
+    if (url.searchParams.get('check') === 'model') {
+      const model = url.searchParams.get('candidate') || judgeModel();
+      if (
+        ![
+          judgeModel(),
+          'google/gemini-2.5-flash',
+          'google/gemini-3.5-flash',
+          'openai/gpt-oss-120b',
+          'recursive/flint-v1.0',
+        ].includes(model)
+      )
+        throw new InputError('Unknown test model.');
+      await checkModelAccess(model);
+      return Response.json({ model, available: true });
+    }
     const [event] =
       await db()`SELECT guide IS NOT NULL AS guide_ready FROM event_settings WHERE singleton`;
     const launcher = await cloudLauncher();
+    const guideReady = Boolean(
+      event.guide_ready || (await launcher.approvedGuide()),
+    );
     const operation = await launcher.start(randomUUID(), true);
-    return Response.json({ operation, guideReady: event.guide_ready });
+    return Response.json({ operation, guideReady, model: judgeModel() });
   } catch (error) {
     return failure(error);
   }

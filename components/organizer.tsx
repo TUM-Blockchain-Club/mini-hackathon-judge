@@ -235,7 +235,6 @@ export function Organizer({
                 disabled={
                   !!busy ||
                   !submitted ||
-                  (!data.guideReady && !data.started) ||
                   (!data.started &&
                     !!data.deadline &&
                     Date.parse(data.deadline) + 600000 >= Date.now())
@@ -317,7 +316,7 @@ export function Organizer({
               <small>
                 {data.guideReady
                   ? 'A guide is loaded.'
-                  : 'Import Andi’s Markdown before starting the batch.'}{' '}
+                  : 'Start judging loads the approved guide from private storage. You can also import a revised guide here.'}{' '}
                 Starting the batch freezes the guide and each team’s latest
                 accepted submission.
               </small>

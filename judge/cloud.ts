@@ -1,5 +1,6 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { getVercelOidcToken } from '@vercel/oidc';
+import { validateGuide } from './guide';
 import { InputError } from '../lib/db';
 
 const project = 'tbc-mini-hackathon-judge';
@@ -84,6 +85,31 @@ export async function cloudLauncher() {
     throw new InputError('The pinned Cloud Run sandbox is not ready.', 503);
   return {
     snapshot: container.image as string,
+    async approvedGuide() {
+      const res = await fetch(
+        'https://storage.googleapis.com/storage/v1/b/tbc-mini-hackathon-judge-private-guide-60883640786/o/approved.md?alt=media',
+        {
+          headers,
+          cache: 'no-store',
+          signal: AbortSignal.timeout(10_000),
+        },
+      );
+      if (!res.ok)
+        throw new InputError(
+          'The approved guide could not be loaded. Import it at the organizer desk.',
+          503,
+        );
+      const guide = await res.text();
+      if (
+        createHash('sha256').update(guide).digest('hex') !==
+        '29b7fe0c17cd1fbec491dc76ea987c1e7ec31670bbbce46efd380f37264aa6ce'
+      )
+        throw new InputError(
+          'The approved guide revision has changed. Import the intended revision at the organizer desk.',
+          409,
+        );
+      return validateGuide(guide);
+    },
     async start(id: string, probe = false) {
       const env = [
         { name: 'JUDGE_RUN', value: id },

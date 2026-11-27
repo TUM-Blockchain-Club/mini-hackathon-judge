@@ -116,7 +116,7 @@ export async function addTeam(name: string) {
 }
 export async function freezeBatch(
   officialOnly = false,
-  target?: { model: string; snapshot: string },
+  target?: { model: string; snapshot: string; approvedGuide?: string },
 ) {
   return db().begin(async (tx) => {
     const [e] =
@@ -145,6 +145,11 @@ export async function freezeBatch(
           'Configure the judge model, gateway access and sandbox snapshot before starting.',
           503,
         );
+      if (!e.guide && target?.approvedGuide) {
+        e.guide = target.approvedGuide;
+        e.rubric = officialRubric;
+        await tx`UPDATE event_settings SET guide=${target.approvedGuide},rubric=${tx.json(officialRubric)} WHERE singleton`;
+      }
       const rubric = e.rubric ? rubricSchema.parse(e.rubric) : officialRubric;
       const official = rubric.version === officialVersion;
       if (officialOnly && !official)
