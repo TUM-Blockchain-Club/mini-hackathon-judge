@@ -65,8 +65,10 @@ export async function POST(
           output: 'exit 0',
         },
       ];
+      let stage = 'inspection';
       try {
         await planInspection(run, evidence, 'inspect', 1);
+        stage = 'scorecard';
         const { points } = await grade(run, evidence);
         return Response.json({ points });
       } catch (err) {
@@ -75,11 +77,14 @@ export async function POST(
             ? String(err.statusCode)
             : 'unknown';
         throw new InputError(
-          'Synthetic gateway check failed (' +
+          'Synthetic ' +
+            stage +
+            ' check failed (' +
             status +
-            ', ' +
-            (err instanceof Error ? err.name : 'error') +
-            ').',
+            '). ' +
+            (err instanceof Error
+              ? err.message.split('\n')[0].slice(0, 250)
+              : 'Invalid response'),
           502,
         );
       }

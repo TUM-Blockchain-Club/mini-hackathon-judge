@@ -100,32 +100,64 @@ export async function grade(run: Run, evidence: Evidence[]) {
     throw Error(
       'The judge did not record both inspection and cross-check evidence.',
     );
-  const { output } = await generateText({
-    model: run.model,
-    providerOptions: { gateway: { zeroDataRetention: true } },
-    system,
-    maxRetries: 1,
-    maxOutputTokens: run.guide ? 11500 : 6000,
-    abortSignal: AbortSignal.timeout(timeLeft(run.until - 1500, 85_000)),
-    output: Output.object({
-      schema: run.guide ? officialCardSchema : cardSchema,
-    }),
-    prompt: JSON.stringify({
-      criteria: run.criteria,
-      focus: run.focus,
-      evidence: evidence.map((o) => ({
-        ...o,
-        output: o.output.slice(0, 2800),
-      })),
-      guide: run.guide,
-      task: run.guide
-        ? 'Return one check for every supplied requirement ID, marking out-of-scope items not applicable with a reason. For each cite the observation ID and file/line, slide or cell, the actual result, evidence label, credit and scoring effect. Redact sensitive values. For ground-rule violations give zero credit to the affected part and flag it for the jury. Only the jury can disqualify a serious case or mark evidence observed in demo. External sources unavailable offline are unverified. Score S1/S2/S3/S4 strictly full, half or zero; do not use quarter levels or the fictional example scores. For a topic without a repeatable process, set efficiencyApplicable false and S4 to zero with rationale; the server rescales. Include a specific demo question from the guide for the team. Do not award pitch points.'
-        : 'Return one row per criterion. Apply the point anchors. Cite observed evidence refs with file/cell/command locations. If team evidence is missing, cite the inspected locations and explain the gap.',
-    }),
-  });
+  const scoringEnd = Math.min(run.until - 1500, Date.now() + 85_000);
   const refs = new Set(evidence.map((e) => e.ref));
-  const points = run.guide
-    ? validateOfficial(officialCardSchema.parse(output), run.guide.ids, refs)
-    : scoreCard(run.criteria, output, refs);
-  return { output, points };
+  let correction: string | undefined;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const { output } = await generateText({
+        model: run.model,
+        providerOptions: { gateway: { zeroDataRetention: true } },
+        system,
+        maxRetries: 0,
+        maxOutputTokens: run.guide ? 11500 : 6000,
+        abortSignal: AbortSignal.timeout(timeLeft(scoringEnd, 85_000)),
+        output: Output.object({
+          schema: run.guide ? officialCardSchema : cardSchema,
+        }),
+        prompt: JSON.stringify({
+          criteria: run.criteria,
+          focus: run.focus,
+          evidence: evidence.map((o) => ({
+            ...o,
+            output: o.output.slice(0, 2800),
+          })),
+          guide: run.guide,
+          correction,
+          allowedEvidenceRefs: [...refs],
+          requiredRows: run.criteria.map((c) => ({
+            id: c.id,
+            ...(run.guide ? { allowedPoints: [0, c.max / 2, c.max] } : {}),
+          })),
+          requiredChecks: run.guide?.ids,
+          responseInstructions:
+            'Copy each supplied ID exactly. Use the observation ID alone in evidence.ref and put paths or line numbers only in evidence.location. In checks use not applicable for both the label and the credit when out of scope. A violation or contradicted result has none credit. For claimed only or unverified use half or none. Use brief sentences.',
+
+          task: run.guide
+            ? 'Return one check for every supplied requirement ID, marking out-of-scope items not applicable with a reason. For each cite the observation ID and file/line, slide or cell, the actual result, evidence label, credit and scoring effect. Redact sensitive values. For ground-rule violations give zero credit to the affected part and flag it for the jury. Only the jury can disqualify a serious case or mark evidence observed in demo. External sources unavailable offline are unverified. Score S1/S2/S3/S4 strictly full, half or zero; do not use quarter levels or the fictional example scores. For a topic without a repeatable process, set efficiencyApplicable false and S4 to zero with rationale; the server rescales. Include a specific demo question from the guide for the team. Do not award pitch points.'
+            : 'Return one row per criterion. Apply the point anchors. Cite observed evidence refs with file/cell/command locations. If team evidence is missing, cite the inspected locations and explain the gap.',
+        }),
+      });
+      const points = run.guide
+        ? validateOfficial(
+            officialCardSchema.parse(output),
+            run.guide.ids,
+            refs,
+          )
+        : scoreCard(run.criteria, output, refs);
+      return { output, points };
+    } catch (error) {
+      if (
+        attempt > 0 ||
+        scoringEnd - Date.now() < 10_000 ||
+        (error && typeof error === 'object' && 'statusCode' in error)
+      )
+        throw error;
+      correction =
+        error instanceof Error && error.name === 'Error'
+          ? error.message.slice(0, 220)
+          : 'The previous response did not match the required JSON scorecard. Keep it concise and use the supplied IDs and credit levels.';
+    }
+  }
+  throw Error('Scorecard validation failed.');
 }
