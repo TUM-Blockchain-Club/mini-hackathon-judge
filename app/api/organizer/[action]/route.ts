@@ -1,5 +1,4 @@
-import { start } from 'workflow/api';
-import { judgeSubmission } from '@/judge/workflow';
+import { cloudLauncher, judgeModel } from '@/judge/cloud';
 import { officialRubric } from '@/judge/official';
 import { importGuide } from '@/judge/guide';
 import { configure, freezeBatch, desk } from '@/lib/store';
@@ -101,9 +100,13 @@ export async function POST(
           await configure(String(body.deadline), officialRubric);
           break;
         case 'judge': {
-          const jobs = await freezeBatch(true);
+          const launcher = await cloudLauncher();
+          const jobs = await freezeBatch(true, {
+            model: judgeModel(),
+            snapshot: launcher.snapshot,
+          });
           const result = await Promise.allSettled(
-            jobs.map((id) => start(judgeSubmission, [id])),
+            jobs.map((id) => launcher.start(id)),
           );
           if (result.some((r) => r.status === 'rejected'))
             throw new InputError(

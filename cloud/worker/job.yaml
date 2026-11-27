@@ -1,0 +1,24 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: repo-judge-v1
+  annotations:
+    run.googleapis.com/launch-stage: BETA
+spec:
+  template:
+    spec:
+      taskCount: 1
+      parallelism: 1
+      template:
+        spec:
+          maxRetries: 0
+          timeoutSeconds: 900
+          serviceAccountName: repo-judge@tbc-mini-hackathon-judge.iam.gserviceaccount.com
+          containers:
+            - name: judge
+              image: europe-west1-docker.pkg.dev/tbc-mini-hackathon-judge/judge/worker@sha256:0d7d0f2782fc455259f41bfc218dd5bd603ffddbac19975b5d9574d5317ba06a
+              sandboxLauncher: true
+              resources:
+                limits:
+                  cpu: "2"
+                  memory: 2Gi

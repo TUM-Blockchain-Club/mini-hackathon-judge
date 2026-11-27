@@ -114,10 +114,20 @@ export async function addTeam(name: string) {
     );
   return code;
 }
-export async function freezeBatch(officialOnly = false) {
+export async function freezeBatch(
+  officialOnly = false,
+  target?: { model: string; snapshot: string },
+) {
   return db().begin(async (tx) => {
     const [e] =
       await tx`SELECT *, clock_timestamp() AS stamp FROM event_settings WHERE singleton FOR UPDATE`;
+    const model = target?.model ?? process.env.JUDGE_MODEL;
+    const snapshot = target?.snapshot ?? process.env.JUDGE_SNAPSHOT_ID;
+    if (target && e.started_at && e.snapshot !== snapshot)
+      throw new InputError(
+        'The frozen batch requires its original Cloud Run image.',
+        409,
+      );
     if (!e.started_at) {
       if (!e.deadline || +e.stamp <= +e.deadline + 600_000)
         throw new InputError(
@@ -125,8 +135,8 @@ export async function freezeBatch(officialOnly = false) {
           409,
         );
       if (
-        !process.env.JUDGE_MODEL ||
-        !process.env.JUDGE_SNAPSHOT_ID ||
+        !model ||
+        !snapshot ||
         (!process.env.VERCEL &&
           !process.env.AI_GATEWAY_API_KEY &&
           !process.env.VERCEL_OIDC_TOKEN)
@@ -156,9 +166,9 @@ export async function freezeBatch(officialOnly = false) {
           ? officialRubric.common
           : [...rubric.common, ...(rubric.focuses[s.focus] ?? [])];
         const guide = official ? trackGuide(e.guide, s.focus) : undefined;
-        await tx`INSERT INTO judge_runs(submission_id,until_at,rubric,model,snapshot) VALUES(${s.id},${new Date(+e.stamp + 900_000)},${tx.json({ version: rubric.version, criteria: rules, ...(guide ? { guide } : {}) })},${process.env.JUDGE_MODEL},${process.env.JUDGE_SNAPSHOT_ID})`;
+        await tx`INSERT INTO judge_runs(submission_id,until_at,rubric,model,snapshot) VALUES(${s.id},${new Date(+e.stamp + 900_000)},${tx.json({ version: rubric.version, criteria: rules, ...(guide ? { guide } : {}) })},${model!},${snapshot!})`;
       }
-      await tx`UPDATE event_settings SET started_at=${e.stamp},model=${process.env.JUDGE_MODEL},snapshot=${process.env.JUDGE_SNAPSHOT_ID} WHERE singleton`;
+      await tx`UPDATE event_settings SET started_at=${e.stamp},model=${model!},snapshot=${snapshot!} WHERE singleton`;
     }
     const jobs =
       await tx`SELECT id FROM judge_runs WHERE worker IS NULL AND phase='queued' AND until_at>clock_timestamp()`;

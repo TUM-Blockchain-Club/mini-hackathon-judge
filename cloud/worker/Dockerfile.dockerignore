@@ -1,0 +1,11 @@
+**
+!scripts/
+!scripts/judge-read.py
+!judge/
+!judge/fixtures/
+!judge/fixtures/tax-sample.json
+!cloud/
+!cloud/worker/
+!cloud/worker/Dockerfile
+!cloud/worker/main.py
+!cloud/worker/unpack.py

@@ -242,7 +242,12 @@ export function Organizer({
                 }
                 onClick={() =>
                   act('judge', {}, (r) =>
-                    setNotice(r.queued + ' sessions dispatched.'),
+                    setNotice(
+                      r.queued
+                        ? r.queued +
+                            ' Cloud Run sessions dispatched. You can close this page and return for the scorecards.'
+                        : 'All sessions have already been dispatched.',
+                    ),
                   )
                 }
               >
