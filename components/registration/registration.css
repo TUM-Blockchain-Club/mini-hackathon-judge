@@ -536,6 +536,24 @@
 .submission-team strong {
   overflow-wrap: anywhere;
 }
+.team-account-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.team-account-nav a {
+  padding: 10px 12px;
+  font-weight: 650;
+}
+.team-account-nav a[aria-current] {
+  color: var(--bg);
+  background: var(--brand);
+}
+.team-account-nav a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
 .submission-action {
   border: 0;
   background: none;

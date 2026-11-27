@@ -80,6 +80,7 @@ export function Submission({
         <label>
           Team access code
           <input
+            id="access-code"
             name="code"
             autoComplete="off"
             required
@@ -199,7 +200,7 @@ export function Submission({
                 : state === 'late'
                   ? 'Submitting now applies the 5-point late deduction.'
                   : open && !teamId && !useCode
-                    ? 'Choose a team access option to submit.'
+                    ? 'Log in or sign up your team to submit.'
                     : ''}
         </small>
       </div>

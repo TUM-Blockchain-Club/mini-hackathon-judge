@@ -134,7 +134,7 @@ export function RosterForm({
           spellCheck={false}
           required
           maxLength={80}
-          autoComplete="off"
+          autoComplete={mode === 'signup' ? 'username' : 'off'}
           placeholder="e.g. Block_Builders"
         />
       </label>
@@ -249,7 +249,10 @@ export function LoginForm({
     }
   }
   return (
-    <section className={admin ? 'reg-card' : 'submission-auth-form'}>
+    <section
+      id={admin ? undefined : 'login'}
+      className={admin ? 'reg-card' : 'submission-auth-form'}
+    >
       <h2>{admin ? 'Admin login' : 'Team login'}</h2>
       <p className="reg-intro">
         {admin
@@ -264,6 +267,8 @@ export function LoginForm({
             required={!admin}
             maxLength={80}
             autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
             placeholder={admin ? 'Organizer' : 'Your team name'}
           />
         </label>

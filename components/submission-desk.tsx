@@ -11,11 +11,11 @@ type Desk = {
   closes?: string;
   team: { id: string; name: string } | null;
 };
-type Access = 'idle' | 'login' | 'signup' | 'code';
+type Access = 'login' | 'signup' | 'code';
 
 export function SubmissionDesk() {
   const [desk, setDesk] = useState<Desk | null>(null),
-    [access, setAccess] = useState<Access>('idle'),
+    [access, setAccess] = useState<Access>('login'),
     [error, setError] = useState(''),
     [signingOut, setSigningOut] = useState(false),
     [directoryFor, setDirectoryFor] = useState<string | null>(null),
@@ -29,7 +29,6 @@ export function SubmissionDesk() {
       if (request === sequence.current) {
         if (previousTeam.current && previousTeam.current !== info.team?.id) {
           setReset((n) => n + 1);
-          setAccess('idle');
           setDirectoryFor(null);
         }
         previousTeam.current = info.team?.id;
@@ -42,6 +41,23 @@ export function SubmissionDesk() {
         setDesk(null);
       }
     }
+  }, []);
+  useEffect(() => {
+    function readAccess() {
+      switch (window.location.hash) {
+        case '#signup':
+          setAccess('signup');
+          break;
+        case '#access-code':
+          setAccess('code');
+          break;
+        default:
+          setAccess('login');
+      }
+    }
+    readAccess();
+    window.addEventListener('hashchange', readAccess);
+    return () => window.removeEventListener('hashchange', readAccess);
   }, []);
   useEffect(() => {
     void refresh();
@@ -67,8 +83,15 @@ export function SubmissionDesk() {
     return () => clearTimeout(timer);
   }, [desk, refresh]);
   async function identified() {
-    setAccess('idle');
     await refresh();
+    if (window.location.pathname === '/submit' && window.location.hash) {
+      window.history.replaceState(
+        null,
+        '',
+        window.location.pathname + window.location.search,
+      );
+    }
+    setAccess('login');
   }
   async function logout() {
     setSigningOut(true);
@@ -125,61 +148,44 @@ export function SubmissionDesk() {
             </div>
           </>
         ) : desk ? (
-          <>
-            <span>Team access</span>
-            <div className="submission-access-actions">
-              <button
-                type="button"
-                className="submission-action"
-                aria-expanded={access === 'login'}
-                onClick={() => setAccess(access === 'login' ? 'idle' : 'login')}
-              >
-                Team login
-              </button>
-              <button
-                type="button"
-                className="submission-action"
-                aria-expanded={access === 'signup'}
-                onClick={() =>
-                  setAccess(access === 'signup' ? 'idle' : 'signup')
-                }
-              >
-                Register a team
-              </button>
-              <button
-                type="button"
-                className="submission-action"
-                aria-expanded={access === 'code'}
-                onClick={() => setAccess(access === 'code' ? 'idle' : 'code')}
-              >
-                Use access code
-              </button>
-            </div>
-          </>
+          <nav aria-label="Team account" className="team-account-nav">
+            <a
+              href="#login"
+              aria-current={access === 'login' ? 'location' : undefined}
+            >
+              Team login
+            </a>
+            <a
+              href="#signup"
+              aria-current={access === 'signup' ? 'location' : undefined}
+            >
+              Sign up a team
+            </a>
+            <a
+              href="#access-code"
+              aria-current={access === 'code' ? 'location' : undefined}
+            >
+              Use access code
+            </a>
+          </nav>
         ) : (
           <span role="status">
             {error ? 'Team access unavailable' : 'Loading team access…'}
           </span>
         )}
       </div>
-      {team && directoryFor === team.id && (
-        <TeamDirectory key={team.id} />
-      )}
-      {!desk?.team && access === 'login' && (
+      {team && directoryFor === team.id && <TeamDirectory key={team.id} />}
+      {desk && !team && access === 'login' && (
         <LoginForm onSuccess={identified} />
       )}
-      {!desk?.team && access === 'signup' && (
-        <section className="submission-auth-form">
+      {desk && !team && access === 'signup' && (
+        <section className="submission-auth-form" id="signup">
           <h2>Register your team</h2>
           <p className="reg-intro">
             Register one to three members. Everyone signs in with the same team
             name and password.
           </p>
-          <RosterForm
-            mode="signup"
-            onSaved={identified}
-            onCancel={() => setAccess('idle')}
-          />
+          <RosterForm mode="signup" onSaved={identified} />
         </section>
       )}
       {error && (

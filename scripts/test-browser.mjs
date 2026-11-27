@@ -66,7 +66,7 @@ try {
     teamPassword = 'private-fixture-pass';
   const p = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   p.on('pageerror', (e) => errors.push(e.message));
-  for (const oldPath of ['/', '/team', '/login', '/rules']) {
+  for (const oldPath of ['/', '/team', '/rules']) {
     const response = await p.request.get(origin + oldPath, { maxRedirects: 0 });
     assert.equal(response.status(), 308);
     assert.equal(
@@ -74,8 +74,20 @@ try {
       '/submit',
     );
   }
+  await p.goto(origin + '/login');
+  await p.getByRole('heading', { name: 'Team login' }).waitFor();
+  await p.goto(origin + '/signup');
+  await p.getByRole('heading', { name: 'Register your team' }).waitFor();
+  await p.reload();
+  await p.getByLabel('Team password', { exact: true }).waitFor();
+  const accountNav = p.getByRole('navigation', { name: 'Team account' });
+  await accountNav.getByRole('link', { name: 'Team login' }).click();
+  await p.getByRole('heading', { name: 'Team login' }).waitFor();
+  await p.goBack();
+  await p.getByRole('heading', { name: 'Register your team' }).waitFor();
   await p.goto(origin + '/');
   await p.getByRole('heading', { name: 'Project submission' }).waitFor();
+  await p.getByRole('heading', { name: 'Team login' }).waitFor();
   assert.equal(new URL(p.url()).pathname, '/submit');
   const directoryUrl = origin + '/api/team/directory';
   assert.equal((await p.request.get(directoryUrl)).status(), 401);
@@ -118,7 +130,7 @@ try {
       .evaluate((input) => input.files[0]?.name),
     'draft.txt',
   );
-  await p.getByRole('button', { name: 'Register a team' }).click();
+  await accountNav.getByRole('link', { name: 'Sign up a team' }).click();
   await p.getByRole('heading', { name: 'Register your team' }).waitFor();
   const signupName = p.getByLabel('Team name', { exact: true });
   await signupName.fill('Bad name');
@@ -334,7 +346,7 @@ try {
   await p.getByText(name, { exact: true }).waitFor();
   assert.equal(await p.getByText('Ren Weiss').count(), 0);
   await p.getByRole('button', { name: 'Log out' }).click();
-  await p.getByRole('button', { name: 'Team login' }).waitFor();
+  await p.getByRole('heading', { name: 'Team login' }).waitFor();
   assert.equal((await p.request.get(origin + '/api/team/me')).status(), 401);
   assert.equal((await p.request.get(directoryUrl)).status(), 401);
   assert.equal(await p.getByRole('button', { name: 'Other teams' }).count(), 0);
@@ -346,8 +358,13 @@ try {
     ).status(),
     401,
   );
-  await p.getByRole('button', { name: 'Team login' }).click();
   await p.getByLabel('Team name', { exact: true }).fill(name.toLowerCase());
+  await p.locator('input[name=password]').fill('incorrect-password');
+  await p.getByRole('button', { name: 'Log in' }).click();
+  await p
+    .getByRole('alert')
+    .filter({ hasText: 'Check your team name and password.' })
+    .waitFor();
   await p.locator('input[name=password]').fill(teamPassword);
   await p.getByRole('button', { name: 'Log in' }).click();
   await p.getByRole('button', { name: 'Log out' }).waitFor();
@@ -520,7 +537,7 @@ try {
   );
 
   await p.getByRole('button', { name: 'Log out' }).click();
-  await p.getByRole('button', { name: 'Use access code' }).click();
+  await accountNav.getByRole('link', { name: 'Use access code' }).click();
   const invite = randomBytes(12).toString('hex').toUpperCase();
   const inviteHash = createHash('sha256').update(invite).digest('hex');
   await isolated`INSERT INTO teams(name,code_hash) VALUES('Invite fixture',${inviteHash})`;
