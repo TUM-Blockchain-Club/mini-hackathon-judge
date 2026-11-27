@@ -28,6 +28,7 @@ export async function checkModelAccess(model: string) {
   try {
     await generateText({
       model,
+      providerOptions: { gateway: { zeroDataRetention: true } },
       prompt: 'Reply OK.',
       maxRetries: 0,
       maxOutputTokens: 32,
@@ -57,6 +58,7 @@ export async function planInspection(
   const phaseEnd = run.until - (phase === 'inspect' ? 300_000 : 65_000);
   const { output } = await generateText({
     model: run.model,
+    providerOptions: { gateway: { zeroDataRetention: true } },
     system,
     maxRetries: 0,
     maxOutputTokens: 1800,
@@ -100,6 +102,7 @@ export async function grade(run: Run, evidence: Evidence[]) {
     );
   const { output } = await generateText({
     model: run.model,
+    providerOptions: { gateway: { zeroDataRetention: true } },
     system,
     maxRetries: 1,
     maxOutputTokens: run.guide ? 11500 : 6000,

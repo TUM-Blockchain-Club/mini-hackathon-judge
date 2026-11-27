@@ -31,17 +31,7 @@ export async function POST(request: Request) {
       throw new InputError('Invalid cloud operator identity.', 403);
     const url = new URL(request.url);
     if (url.searchParams.get('check') === 'model') {
-      const model = url.searchParams.get('candidate') || judgeModel();
-      if (
-        ![
-          judgeModel(),
-          'google/gemini-2.5-flash',
-          'google/gemini-3.5-flash',
-          'openai/gpt-oss-120b',
-          'recursive/flint-v1.0',
-        ].includes(model)
-      )
-        throw new InputError('Unknown test model.');
+      const model = judgeModel();
       await checkModelAccess(model);
       return Response.json({ model, available: true });
     }
