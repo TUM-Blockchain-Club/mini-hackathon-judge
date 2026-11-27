@@ -78,6 +78,43 @@ try {
   await p.getByRole('heading', { name: 'Project submission' }).waitFor();
   assert.equal(new URL(p.url()).pathname, '/submit');
   await p.getByLabel('Project title').fill('Draft before signup');
+  await p.getByRole('radio', { name: 'File upload' }).check();
+  await p.locator('input[type=file]').setInputFiles({
+    name: 'draft.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('Unsubmitted draft'),
+  });
+  const nav = p.getByRole('navigation', { name: 'Team portal' });
+  await nav.getByRole('link', { name: 'Resources' }).click();
+  await p.getByRole('heading', { name: 'Resources', exact: true }).waitFor();
+  assert.equal(new URL(p.url()).pathname, '/resources');
+  assert.equal(
+    await nav
+      .getByRole('link', { name: 'Resources' })
+      .getAttribute('aria-current'),
+    'page',
+  );
+  assert.equal(await p.getByRole('main').getByRole('link').count(), 6);
+  assert.equal(
+    await p.getByRole('textbox', { name: 'Project title' }).count(),
+    0,
+  );
+  await nav.getByRole('link', { name: 'Submission', exact: true }).click();
+  await p.getByRole('heading', { name: 'Project submission' }).waitFor();
+  await p.goBack();
+  await p.getByRole('heading', { name: 'Resources', exact: true }).waitFor();
+  await p.goForward();
+  await p.getByRole('heading', { name: 'Project submission' }).waitFor();
+  assert.equal(
+    await p.getByLabel('Project title').inputValue(),
+    'Draft before signup',
+  );
+  assert.equal(
+    await p
+      .locator('input[type=file]')
+      .evaluate((input) => input.files[0]?.name),
+    'draft.txt',
+  );
   await p.getByRole('button', { name: 'Register a team' }).click();
   await p.getByRole('heading', { name: 'Register your team' }).waitFor();
   await p.getByLabel('Team name', { exact: true }).fill(name);
@@ -355,6 +392,13 @@ try {
   assert.equal((await desk.request.get(origin + link)).status(), 200);
   assert.equal((await p.request.get(origin + link)).status(), 401);
   await p.setViewportSize({ width: 390, height: 844 });
+  await p.goto(origin + '/resources');
+  await p
+    .getByRole('link', { name: 'Student AI tools setup guide (PDF)' })
+    .waitFor();
+  assert.ok(
+    await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  );
   await p.goto(origin + '/');
   assert.ok(
     await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth),

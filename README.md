@@ -14,7 +14,7 @@ npm run dev
 
 Open `/submit` for the participant flow. Teams sign in or register one to three members inline, enter their project, submit and receive a receipt on this page. Invite-only teams can use **Use access code**. The submission and team administration pages are prerendered. Same-origin APIs load the deadline and private session data from PostgreSQL. Run `npm run db:setup` on existing installations to add profiles and sessions.
 
-Under **Project resources** on `/submit`, teams can open the track briefs, rating matrices, hands-on test log, submission template and pitch scoring criteria in [Andi’s hackathon repository](https://github.com/andi-lightup/lightup-tbc-hackathon). Teams can include their pitch deck in the project commit or ZIP. The [student AI tools setup guide](public/docs/student-ai-tools.pdf) is included in this project and served as a static PDF.
+In the **Resources** navbar tab (`/resources`), teams can open the track briefs, rating matrices, hands-on test log, submission template and pitch scoring criteria in [Andi’s hackathon repository](https://github.com/andi-lightup/lightup-tbc-hackathon). Switching between Submission and Resources keeps the current form entries and file selection. Teams can include their pitch deck in the project commit or ZIP. The [student AI tools setup guide](public/docs/student-ai-tools.pdf) is included in this project and served as a static PDF.
 
 Team admins use individual names and passwords at `/admin` to create, inspect or edit teams. Teams created with an old invitation retain their submission access codes. An admin can add their roster and set a team password. The judging desk is at `/organizer`. The participant submission deadline is displayed in Berlin time.
 

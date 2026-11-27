@@ -174,6 +174,9 @@ export function Submission({
           <small>ZIP, PDF, spreadsheet, document or text · up to 3 MiB</small>
         </label>
       )}
+      <small>
+        Include your pitch deck in the project commit or ZIP you submit.
+      </small>
       {error && (
         <p className="reg-error" role="alert">
           {error}

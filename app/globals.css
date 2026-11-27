@@ -846,6 +846,9 @@ details > div {
   }
 }
 @media (max-width: 385px) {
+  .organizer-link span {
+    display: none;
+  }
   .fields {
     grid-template-columns: 1fr;
   }
