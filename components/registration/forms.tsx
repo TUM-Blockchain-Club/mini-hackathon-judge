@@ -1,7 +1,5 @@
 'use client';
 import { useId, useState, type FormEvent } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 import type { Member, TeamProfile } from '@/lib/registration';
 
@@ -61,11 +59,10 @@ export function RosterForm({
 }: {
   mode: 'signup' | 'create' | 'edit';
   team?: TeamProfile;
-  onSaved?: () => void;
+  onSaved: () => void | Promise<void>;
   onCancel?: () => void;
 }) {
-  const router = useRouter(),
-    group = useId();
+  const group = useId();
   const [members, setMembers] = useState(() =>
       (team?.members.length ? team.members : [emptyMember()]).map((m, i) => ({
         ...m,
@@ -109,8 +106,7 @@ export function RosterForm({
           revision: team?.revision,
         },
       );
-      if (mode === 'signup') router.replace('/team');
-      else onSaved?.();
+      await onSaved();
     } catch (err) {
       setError(problem(err));
     } finally {
@@ -215,10 +211,9 @@ export function LoginForm({
   onSuccess,
 }: {
   admin?: boolean;
-  onSuccess?: () => void;
+  onSuccess: () => void | Promise<void>;
 }) {
-  const router = useRouter(),
-    [busy, setBusy] = useState(false),
+  const [busy, setBusy] = useState(false),
     [error, setError] = useState('');
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -230,8 +225,7 @@ export function LoginForm({
         name: f.get('name'),
         password: f.get('password'),
       });
-      if (admin) onSuccess?.();
-      else router.replace('/team');
+      await onSuccess();
     } catch (err) {
       setError(problem(err));
     } finally {
@@ -239,7 +233,7 @@ export function LoginForm({
     }
   }
   return (
-    <section className="reg-card">
+    <section className={admin ? 'reg-card' : 'submission-auth-form'}>
       <h2>{admin ? 'Admin login' : 'Team login'}</h2>
       <p className="reg-intro">
         {admin
@@ -269,11 +263,6 @@ export function LoginForm({
           {busy ? 'Logging in…' : 'Log in'}
         </button>
       </form>
-      {!admin && (
-        <p className="reg-after">
-          New team? <Link href="/">Register your team</Link>
-        </p>
-      )}
     </section>
   );
 }

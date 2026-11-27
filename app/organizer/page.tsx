@@ -22,7 +22,7 @@ export default async function Page() {
   }
   return (
     <>
-      <Header section="organizer" />
+      <Header />
       <main className="wrap secondary">{content}</main>
       <Footer />
     </>

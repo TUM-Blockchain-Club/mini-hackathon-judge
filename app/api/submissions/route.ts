@@ -5,6 +5,17 @@ import { sameOrigin, throttle } from '@/lib/auth';
 import { InputError } from '@/lib/db';
 import { failure } from '@/lib/http';
 export const maxDuration = 60;
+export async function GET() {
+  try {
+    const [event, team] = await Promise.all([publicEvent(), currentTeam()]);
+    return Response.json(
+      { ...event, team: team ? { id: team.id, name: team.name } : null },
+      { headers: { 'Cache-Control': 'private, no-store' } },
+    );
+  } catch (err) {
+    return failure(err);
+  }
+}
 export async function POST(request: Request) {
   try {
     sameOrigin(request);
@@ -14,10 +25,17 @@ export async function POST(request: Request) {
     if (event.state !== 'open')
       throw new InputError('The submission window is closed.', 409);
     await throttle(request, 'submit', 100);
-    const data = await request.formData(),
-      team =
-        (await currentTeam()) ??
-        (await requireTeam(String(data.get('code') ?? '')));
+    const data = await request.formData();
+    const session = await currentTeam();
+    if (
+      data.has('sessionTeam') &&
+      data.get('sessionTeam') !== (session?.id ?? '')
+    )
+      throw new InputError(
+        'Your team session changed. Check your login before submitting.',
+        401,
+      );
+    const team = session ?? (await requireTeam(String(data.get('code') ?? '')));
     const receipt = await saveSubmission(
       team.id,
       String(data.get('title') ?? ''),

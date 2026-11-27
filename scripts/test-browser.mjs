@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 const require = createRequire(process.cwd() + '/package.json');
 const { chromium } = require('playwright');
-const { randomBytes } = await import('node:crypto');
+const { createHash, randomBytes } = await import('node:crypto');
 const { spawn } = await import('node:child_process');
 const { readFile } = await import('node:fs/promises');
 const { default: postgres } = await import('postgres');
@@ -66,7 +66,19 @@ try {
     teamPassword = 'private-fixture-pass';
   const p = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   p.on('pageerror', (e) => errors.push(e.message));
+  for (const oldPath of ['/', '/team', '/login', '/rules']) {
+    const response = await p.request.get(origin + oldPath, { maxRedirects: 0 });
+    assert.equal(response.status(), 308);
+    assert.equal(
+      new URL(response.headers().location, origin).pathname,
+      '/submit',
+    );
+  }
   await p.goto(origin + '/');
+  await p.getByRole('heading', { name: 'Project submission' }).waitFor();
+  assert.equal(new URL(p.url()).pathname, '/submit');
+  await p.getByLabel('Project title').fill('Draft before signup');
+  await p.getByRole('button', { name: 'Register a team' }).click();
   await p.getByRole('heading', { name: 'Register your team' }).waitFor();
   await p.getByLabel('Team name', { exact: true }).fill(name);
   await p.locator('input[name=password]').fill(teamPassword);
@@ -82,8 +94,13 @@ try {
   }
   assert.equal(await p.getByRole('button', { name: 'Add member' }).count(), 0);
   await p.getByRole('button', { name: 'Register team' }).click();
-  await p.getByRole('heading', { name }).waitFor();
-  await p.getByText('Ada Fern').waitFor();
+  await p.getByRole('button', { name: 'Log out' }).waitFor();
+  assert.equal(new URL(p.url()).pathname, '/submit');
+  assert.equal(
+    await p.getByLabel('Project title').inputValue(),
+    'Draft before signup',
+  );
+  assert.equal(await p.getByText('Ada Fern').count(), 0);
   const me = await (await p.request.get(origin + '/api/team/me')).json();
   const creds = { name, password: teamPassword, members: me.members };
   for (const members of [[], [...me.members, me.members[0]]]) {
@@ -164,10 +181,10 @@ try {
   ]);
   await solo.close();
   await p.reload();
-  await p.getByText('Jae Choi').waitFor();
+  await p.getByText(name, { exact: true }).waitFor();
   assert.equal(await p.getByText('Ren Weiss').count(), 0);
   await p.getByRole('button', { name: 'Log out' }).click();
-  await p.getByRole('heading', { name: 'Team login' }).waitFor();
+  await p.getByRole('button', { name: 'Team login' }).waitFor();
   assert.equal((await p.request.get(origin + '/api/team/me')).status(), 401);
   assert.equal(
     (
@@ -177,11 +194,12 @@ try {
     ).status(),
     401,
   );
-  await p.goto(origin + '/login');
+  await p.getByRole('button', { name: 'Team login' }).click();
   await p.getByLabel('Team name', { exact: true }).fill(name.toLowerCase());
   await p.locator('input[name=password]').fill(teamPassword);
   await p.getByRole('button', { name: 'Log in' }).click();
-  await p.getByRole('heading', { name }).waitFor();
+  await p.getByRole('button', { name: 'Log out' }).waitFor();
+  assert.equal(new URL(p.url()).pathname, '/submit');
   await desk.getByRole('link', { name: 'Open judging desk' }).click();
   await desk.getByRole('heading', { name: 'Organizer desk' }).waitFor();
   if (
@@ -197,15 +215,36 @@ try {
     );
   await desk.getByRole('button', { name: 'Save event settings' }).click();
   await desk.getByText('Event settings saved.').waitFor();
-  await p.getByRole('link', { name: 'Open submission desk' }).click();
+  assert.equal(
+    (
+      await p.request.post(origin + '/api/submissions', {
+        multipart: { sessionTeam: soloProfile.id },
+      })
+    ).status(),
+    401,
+  );
+  await p.reload();
   await p.getByLabel('Project title').fill('Wallet comparison');
   await p.getByLabel('Track', { exact: true }).selectOption('wallet');
   await p.getByLabel('Focus', { exact: true }).selectOption('wallet-B');
-  await p.getByRole('button', { name: 'File upload' }).click();
+  await p.getByRole('radio', { name: 'File upload' }).check();
   await p.locator('input[type=file]').setInputFiles({
     name: 'observations.md',
     mimeType: 'text/markdown',
     buffer: Buffer.from('Wallet usability observation, fixture only.'),
+  });
+  await p.getByRole('button', { name: 'Submit project' }).click();
+  await p.getByText('Project received.').waitFor();
+  assert.equal(new URL(p.url()).pathname, '/submit');
+  await p.getByRole('button', { name: 'Submit a revision' }).click();
+  await p.getByLabel('Project title').fill('Wallet comparison, revised');
+  await p.getByLabel('Track', { exact: true }).selectOption('wallet');
+  await p.getByLabel('Focus', { exact: true }).selectOption('wallet-A');
+  await p.getByRole('radio', { name: 'File upload' }).check();
+  await p.locator('input[type=file]').setInputFiles({
+    name: 'observations.md',
+    mimeType: 'text/markdown',
+    buffer: Buffer.from('Revised observation'),
   });
   await p.getByRole('button', { name: 'Submit project' }).click();
   await p.getByText('Project received.').waitFor();
@@ -239,11 +278,28 @@ try {
     await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
   );
 
-  await p.getByRole('link', { name: 'Team login' }).click();
-  await p.getByRole('heading', { name: 'Team login' }).waitFor();
+  await p.getByRole('button', { name: 'Log out' }).click();
+  await p.getByRole('button', { name: 'Use access code' }).click();
+  const invite = randomBytes(12).toString('hex').toUpperCase();
+  const inviteHash = createHash('sha256').update(invite).digest('hex');
+  await isolated`INSERT INTO teams(name,code_hash) VALUES('Invite fixture',${inviteHash})`;
+  await p.getByLabel('Team access code').fill(invite);
+  await p.getByLabel('Project title').fill('Invite submission');
+  await p.getByLabel('Track', { exact: true }).selectOption('wallet');
+  await p.getByLabel('Focus', { exact: true }).selectOption('wallet-A');
+  await p.getByRole('radio', { name: 'File upload' }).check();
+  await p.locator('input[type=file]').setInputFiles({
+    name: 'project.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('Legacy team entry'),
+  });
+  await p.getByRole('button', { name: 'Submit project' }).click();
+  await p.getByText('Project received.').waitFor();
+  await p.getByText('Invite fixture ·', { exact: false }).waitFor();
+  assert.equal(new URL(p.url()).pathname, '/submit');
   assert.deepEqual(errors, []);
   console.log(
-    'Browser pass: registration, roster bounds, duplicate rejection, login/logout, team isolation, admin create/inspect/edit, signed-in submissions and mobile navigation.',
+    'Browser pass: registration, roster bounds, duplicate rejection, login/logout, team isolation, admin create/inspect/edit, single-page submissions, revisions, legacy links and mobile layout.',
   );
 } finally {
   await browser?.close();

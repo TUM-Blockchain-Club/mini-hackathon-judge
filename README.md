@@ -1,6 +1,6 @@
 # TBC Mini Hackathon Judge
 
-A team registration portal, submission desk and organizer dashboard for the LIGHT UP × TUM Blockchain Club hackathon. Every team submits to one of nine track focuses. The AI submission score contributes 50 points and the jury pitch contributes 50. The organizer sees a single cross-track ranking once both scores exist.
+A participant submission page and organizer dashboard for the LIGHT UP × TUM Blockchain Club hackathon. Every team submits to one of nine track focuses. The AI submission score contributes 50 points and the jury pitch contributes 50. The organizer sees a single cross-track ranking once both scores exist.
 
 ## Run locally
 
@@ -12,14 +12,14 @@ npm run db:setup
 npm run dev
 ```
 
-Open `http://localhost:3000` to register a team with a team name, shared password, and the first name and surname of one to three members. The registration, login, team and admin pages are prerendered. Private data and authentication use same-origin server APIs and PostgreSQL. Run `npm run db:setup` on existing installations to add profiles and sessions.
+Open `/submit` for the participant flow. Teams sign in or register one to three members inline, enter their project, submit and receive a receipt on this page. Invite-only teams can use **Use access code**. The submission and team administration pages are prerendered. Same-origin APIs load the deadline and private session data from PostgreSQL. Run `npm run db:setup` on existing installations to add profiles and sessions.
 
-Participants log in at `/login` and view their roster at `/team`. Administrators use the organizer password at `/admin` to create, inspect or edit teams. Teams created with an old invitation retain their submission access codes. An admin can add their roster and set a team password. The judging desk is at `/organizer`. The participant submission deadline is displayed in Berlin time. The public brief is maintained in [Andi’s repository](https://github.com/andi-lightup/lightup-tbc-hackathon).
+Administrators use the organizer password at `/admin` to create, inspect or edit teams. Teams created with an old invitation retain their submission access codes. An admin can add their roster and set a team password. The judging desk is at `/organizer`. The participant submission deadline is displayed in Berlin time. The public brief is maintained in [Andi’s repository](https://github.com/andi-lightup/lightup-tbc-hackathon).
 
 ## Run an event
 
 1. Enter Andi’s requirements under **Deadline and evaluation rubric**. The bundled rubric is a rehearsal fixture. Each criterion needs an ID, a title, maximum points and guidance for partial credit. Each focus plus the common criteria must total 50. Set a distinct rubric version for the official batch.
-2. Teams register themselves, or an admin creates their team and shares its login. Signed-in teams can open the submission desk from their account. Teams can enter a public GitHub commit URL with a full SHA or upload one file. Private repos and multifile submissions can use a ZIP. File uploads accept 3 MiB, downloaded GitHub archives accept 24 MiB, and archives are limited to 2,500 entries and 96 MiB unpacked. The platform rejects encrypted archives, symlinks and unsafe paths. Direct document formats include PDF, DOCX and XLSX. Teams receive a timestamped receipt and SHA-256 digest. Submit again under the same team before the deadline for a revision.
+2. Teams register themselves, or an admin creates their team and shares its login. The submission form stays on screen during login. Teams can enter a public GitHub commit URL with a full SHA or upload one file. Private repos and multifile submissions can use a ZIP. File uploads accept 3 MiB, downloaded GitHub archives accept 24 MiB, and archives are limited to 2,500 entries and 96 MiB unpacked. The platform rejects encrypted archives, symlinks and unsafe paths. Direct document formats include PDF, DOCX and XLSX. Teams receive a timestamped receipt and SHA-256 digest. Submit again under the same team before the deadline for a revision.
 3. After the deadline, click **Start judging**. A database transaction selects the latest accepted revision from each team and freezes its source, criteria, model and sandbox snapshot. One workflow per submission claims a distinct run. The batch shares a 15-minute wall-clock deadline including queueing. **Resume dispatch** recovers unclaimed jobs without replacing a judge already at work.
 4. Inspect the standings, evidence and per-requirement scorecards in the organizer desk. Each scored row cites the saved command, its output and a location in the source. A provider failure or timeout puts the submission into review with its evidence and no numerical award. Organizers can download the original submission for an independent jury review. Enter each team’s pitch points to calculate its overall percentage. Tied teams retain equal scores.
 
@@ -50,4 +50,4 @@ npm run test:browser
 
 The rehearsal runs eleven concurrent workflows with the production scoring and persistence code, a virtual clock and test doubles for the cloud services. A live Vercel run is needed to measure provider latency and judge quality.
 
-The registration frontend follows the TBC Hackathon 2026 site’s square panels, Montserrat typography and brand palette. The header mark and event photo come from the [club website repository](https://github.com/TUM-Blockchain-Club/hackathon-website/tree/96d4176). Event photography by dng.photo.
+The registration frontend follows the TBC Hackathon 2026 site’s square panels, Montserrat typography and brand palette. The club mark comes from the [club website repository](https://github.com/TUM-Blockchain-Club/hackathon-website/tree/96d4176).

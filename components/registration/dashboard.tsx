@@ -1,8 +1,7 @@
 'use client';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { LogOut, Plus, UsersRound } from 'lucide-react';
+import { Plus, UsersRound } from 'lucide-react';
 import type { TeamProfile } from '@/lib/registration';
 import { LoginForm, RosterForm, problem, send } from './forms';
 
@@ -23,77 +22,6 @@ function Roster({ team }: { team: TeamProfile }) {
       This team was created with an access code. Edit it to add members and
       enable team login.
     </p>
-  );
-}
-export function TeamAccount() {
-  const router = useRouter();
-  const [team, setTeam] = useState<TeamProfile | null>(null),
-    [loading, setLoading] = useState(true),
-    [error, setError] = useState('');
-  useEffect(() => {
-    let active = true;
-    fetch('/api/team/me', { cache: 'no-store' })
-      .then(async (r) => {
-        if (r.status === 401) return null;
-        if (!r.ok) throw new Error('Could not load your team.');
-        return await r.json();
-      })
-      .then((t) => {
-        if (active) {
-          setTeam(t);
-          if (!t) router.replace('/login');
-        }
-      })
-      .catch((e) => {
-        if (active) setError(problem(e));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [router]);
-  async function logout() {
-    try {
-      await send('/api/team/logout', 'POST');
-      setTeam(null);
-      router.replace('/login');
-    } catch (e) {
-      setError(problem(e));
-    }
-  }
-  if (loading) return <p role="status">Loading your team…</p>;
-  return (
-    <>
-      {error && (
-        <p className="reg-error" role="alert">
-          {error}
-        </p>
-      )}
-      {team ? (
-        <section className="reg-card">
-          <div className="reg-section-head">
-            <div>
-              <small className="reg-label">Your team</small>
-              <h2>{team.name}</h2>
-            </div>
-            <button className="reg-secondary" onClick={logout}>
-              <LogOut size={15} />
-              Log out
-            </button>
-          </div>
-          <Roster team={team} />
-          <Link href="/submit" className="reg-primary">
-            Open submission desk
-          </Link>
-        </section>
-      ) : (
-        <Link className="reg-secondary" href="/login">
-          Go to team login
-        </Link>
-      )}
-    </>
   );
 }
 export function AdminDesk() {

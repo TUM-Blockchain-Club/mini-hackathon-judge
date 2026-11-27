@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CalendarDays, LockKeyhole, UsersRound } from 'lucide-react';
+import { LockKeyhole } from 'lucide-react';
 import type { ReactNode } from 'react';
 import '@fontsource-variable/montserrat';
 import './registration.css';
@@ -8,7 +8,7 @@ export function RegistrationFrame({
   section,
   children,
 }: {
-  section: 'register' | 'login' | 'admin' | 'team';
+  section: 'submit' | 'admin';
   children: ReactNode;
 }) {
   return (
@@ -17,8 +17,8 @@ export function RegistrationFrame({
         <div className="reg-width reg-nav">
           <Link
             className="reg-brand"
-            href="/"
-            aria-label="TUM Blockchain Club registration"
+            href="/submit"
+            aria-label="TUM Blockchain Club submissions"
           >
             <img
               src="/registration/tbc-icon.png"
@@ -30,20 +30,7 @@ export function RegistrationFrame({
             <span className="reg-brand-short">TBC</span>
           </Link>
           <nav aria-label="Team portal">
-            <Link
-              href="/"
-              aria-current={section === 'register' ? 'page' : undefined}
-            >
-              Register
-            </Link>
-            <Link
-              href={section === 'team' ? '/team' : '/login'}
-              aria-current={
-                section === 'login' || section === 'team' ? 'page' : undefined
-              }
-            >
-              {section === 'team' ? 'My team' : 'Team login'}
-            </Link>
+            {section === 'admin' && <Link href="/submit">Submission</Link>}
             <Link
               href="/admin"
               className="reg-admin-link"
@@ -61,50 +48,8 @@ export function RegistrationFrame({
           <span>
             TUM Blockchain Club <b>×</b> LIGHT UP
           </span>
-          <a
-            href="https://github.com/andi-lightup/lightup-tbc-hackathon"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Event brief ↗
-          </a>
         </div>
       </footer>
     </div>
-  );
-}
-export function EventPoster() {
-  return (
-    <section className="reg-poster" aria-label="Mini Hackathon event">
-      <div className="reg-poster-copy">
-        <div className="reg-byline">
-          <i /> LIGHT UP × TBC
-        </div>
-        <h1>
-          Mini
-          <br />
-          <em>Hackathon</em>
-        </h1>
-        <div className="reg-meta">
-          <span>
-            <CalendarDays size={16} />
-            28 November 2026
-          </span>
-          <span>
-            <UsersRound size={16} />
-            1–3 people per team
-          </span>
-        </div>
-      </div>
-      <figure className="reg-photo">
-        <img
-          src="/registration/hackathon-2026.webp"
-          alt="Participants working side by side at TBC’s 2026 hackathon"
-        />
-        <figcaption>
-          TBC Hackathon 2026 <span>Photo: dng.photo</span>
-        </figcaption>
-      </figure>
-    </section>
   );
 }

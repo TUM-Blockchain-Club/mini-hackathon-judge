@@ -10,11 +10,7 @@ export function Mark() {
     </span>
   );
 }
-export function Header({
-  section,
-}: {
-  section: 'desk' | 'brief' | 'organizer';
-}) {
+export function Header() {
   return (
     <header>
       <div className="wrap navwrap">
@@ -24,24 +20,10 @@ export function Header({
           <span className="brand-sub">Hackathon Hub</span>
         </Link>
         <nav aria-label="Main navigation">
-          <Link
-            href="/submit"
-            aria-current={section === 'desk' ? 'page' : undefined}
-          >
-            Submission desk
-          </Link>
-          <Link
-            href="/rules"
-            aria-current={section === 'brief' ? 'page' : undefined}
-          >
-            Event brief
-          </Link>
+          <Link href="/submit">Submission desk</Link>
+          <Link href="/admin">Teams</Link>
         </nav>
-        <Link
-          className="organizer-link"
-          href="/organizer"
-          aria-current={section === 'organizer' ? 'page' : undefined}
-        >
+        <Link className="organizer-link" href="/organizer" aria-current="page">
           <LockKeyhole size={15} />
           Organizer
         </Link>
