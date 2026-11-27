@@ -652,3 +652,34 @@
     font-size: 16px;
   }
 }
+
+.reg-field-help {
+  color: var(--soft);
+  margin-top: -10px;
+  font-size: 13px;
+}
+.team-directory {
+  padding-block: 12px;
+  border-bottom: 1px solid var(--edge);
+  font-size: 14px;
+}
+.team-directory ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.team-directory li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding-block: 7px;
+}
+.team-directory strong {
+  overflow-wrap: anywhere;
+}
+.team-directory span,
+.team-directory p {
+  color: var(--soft);
+}

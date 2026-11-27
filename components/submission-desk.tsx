@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { LoginForm, RosterForm, problem, send } from './registration/forms';
+import { TeamDirectory } from './registration/team-directory';
 import { Submission } from './submission';
 import { eventDate } from '@/lib/event';
 
@@ -17,6 +18,7 @@ export function SubmissionDesk() {
     [access, setAccess] = useState<Access>('idle'),
     [error, setError] = useState(''),
     [signingOut, setSigningOut] = useState(false),
+    [directoryFor, setDirectoryFor] = useState<string | null>(null),
     [reset, setReset] = useState(0);
   const sequence = useRef(0);
   const previousTeam = useRef<string | undefined>(undefined);
@@ -28,6 +30,7 @@ export function SubmissionDesk() {
         if (previousTeam.current && previousTeam.current !== info.team?.id) {
           setReset((n) => n + 1);
           setAccess('idle');
+          setDirectoryFor(null);
         }
         previousTeam.current = info.team?.id;
         setDesk(info);
@@ -72,6 +75,7 @@ export function SubmissionDesk() {
     try {
       await send('/api/team/logout', 'POST');
       previousTeam.current = undefined;
+      setDirectoryFor(null);
       setReset((n) => n + 1);
       await identified();
     } catch (err) {
@@ -80,6 +84,7 @@ export function SubmissionDesk() {
       setSigningOut(false);
     }
   }
+  const team = desk?.team;
   return (
     <section className="reg-card submission-card">
       {desk?.deadline && (
@@ -95,17 +100,29 @@ export function SubmissionDesk() {
         </p>
       )}
       <div className="submission-team">
-        {desk?.team ? (
+        {team ? (
           <>
-            <strong>{desk.team.name}</strong>
-            <button
-              type="button"
-              className="submission-action"
-              onClick={logout}
-              disabled={signingOut}
-            >
-              Log out
-            </button>
+            <strong>{team.name}</strong>
+            <div className="submission-access-actions">
+              <button
+                type="button"
+                className="submission-action"
+                aria-expanded={directoryFor === team.id}
+                onClick={() =>
+                  setDirectoryFor(directoryFor === team.id ? null : team.id)
+                }
+              >
+                Other teams
+              </button>
+              <button
+                type="button"
+                className="submission-action"
+                onClick={logout}
+                disabled={signingOut}
+              >
+                Log out
+              </button>
+            </div>
           </>
         ) : desk ? (
           <>
@@ -145,13 +162,19 @@ export function SubmissionDesk() {
           </span>
         )}
       </div>
+      {team && directoryFor === team.id && (
+        <TeamDirectory key={team.id} />
+      )}
       {!desk?.team && access === 'login' && (
         <LoginForm onSuccess={identified} />
       )}
       {!desk?.team && access === 'signup' && (
         <section className="submission-auth-form">
           <h2>Register your team</h2>
-          <p className="reg-intro">Add one to three members.</p>
+          <p className="reg-intro">
+            Register one to three members. Everyone signs in with the same team
+            name and password.
+          </p>
           <RosterForm
             mode="signup"
             onSaved={identified}

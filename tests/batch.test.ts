@@ -45,9 +45,11 @@ test(
       };
       const teams = await Promise.all(
         Array.from({ length: 11 }, async (_, i) =>
-          requireTeam(await addTeam('Team ' + i)),
+          requireTeam(await addTeam('Team_' + i)),
         ),
       );
+      await assert.rejects(addTeam('team_0'), /already exists/);
+      await assert.rejects(addTeam('Team name'), /underscores/);
       await Promise.all(
         teams.map((t) => saveSubmission(t.id, 'Original', 'wallet-A', data)),
       );

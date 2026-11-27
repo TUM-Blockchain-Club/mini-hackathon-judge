@@ -5,6 +5,7 @@ import { InputError } from '@/lib/db';
 import {
   authenticateTeam,
   currentTeam,
+  otherTeams,
   saveRoster,
   setTeamCookie,
   signOutTeam,
@@ -14,10 +15,12 @@ export async function GET(
   { params }: RouteContext<'/api/team/[action]'>,
 ) {
   try {
-    if ((await params).action !== 'me') throw new InputError('Not found.', 404);
+    const { action } = await params;
+    if (action !== 'me' && action !== 'directory')
+      throw new InputError('Not found.', 404);
     const team = await currentTeam();
     if (!team) throw new InputError('Log in to view your team.', 401);
-    return Response.json(team, {
+    return Response.json(action === 'me' ? team : await otherTeams(team.id), {
       headers: { 'Cache-Control': 'private, no-store' },
     });
   } catch (err) {

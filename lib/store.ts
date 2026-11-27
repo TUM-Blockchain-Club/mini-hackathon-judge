@@ -1,3 +1,4 @@
+import { teamNameInput } from './registration';
 import {
   officialRubric,
   officialVersion,
@@ -95,11 +96,17 @@ export async function configure(deadline: string, raw: unknown) {
   });
 }
 export async function addTeam(name: string) {
-  if (!name.trim() || name.trim().length > 80)
-    throw new InputError('Enter a team name of up to 80 characters.');
+  const parsed = teamNameInput.safeParse(name);
+  if (!parsed.success) throw new InputError(parsed.error.issues[0].message);
   const code = newTeamCode();
-  const rows =
-    await db()`INSERT INTO teams(name,code_hash) SELECT ${name.trim()},${teamHash(code)} FROM event_settings WHERE singleton AND started_at IS NULL ON CONFLICT(name) DO NOTHING RETURNING id`;
+  const rows = await db().begin(async (tx) => {
+    await tx`SELECT pg_advisory_xact_lock(hashtext(lower(${parsed.data})))`;
+    return tx`INSERT INTO teams(name,code_hash)
+      SELECT ${parsed.data},${teamHash(code)} FROM event_settings
+      WHERE singleton AND started_at IS NULL
+        AND NOT EXISTS (SELECT 1 FROM teams WHERE lower(name)=lower(${parsed.data}))
+      ON CONFLICT(name) DO NOTHING RETURNING id`;
+  });
   if (!rows.length)
     throw new InputError(
       'Team name already exists or judging has started.',

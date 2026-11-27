@@ -6,9 +6,11 @@ import { newTeamCode, teamHash } from './auth';
 import { digest } from './artifacts';
 import {
   createInput,
+  teamNameInput,
   editInput,
   loginInput,
   type TeamProfile,
+  type DirectoryTeam,
 } from './registration';
 import type { z } from 'zod';
 
@@ -25,6 +27,14 @@ export async function listTeams(): Promise<TeamProfile[]> {
     TeamProfile[]
   >`SELECT t.id,t.name,COALESCE(p.members,'[]'::jsonb) AS members,COALESCE(p.revision,0) AS revision FROM teams t LEFT JOIN team_profiles p ON p.team_id=t.id ORDER BY lower(t.name),t.id`;
 }
+export async function otherTeams(teamId: string) {
+  return db()<
+    DirectoryTeam[]
+  >`SELECT t.name, jsonb_array_length(p.members) AS "memberCount"
+    FROM teams t LEFT JOIN team_profiles p ON p.team_id=t.id
+    WHERE t.id <> ${teamId} ORDER BY lower(t.name), t.id`;
+}
+
 export async function saveRoster(
   input: unknown,
   { teamId, token }: { teamId?: string; token?: string } = {},
@@ -40,8 +50,10 @@ export async function saveRoster(
       throw new InputError('That team name is taken.', 409);
     let id = teamId;
     if (id) {
-      const [team] = await tx`SELECT id FROM teams WHERE id=${id} FOR UPDATE`;
+      const [team] =
+        await tx`SELECT id,name FROM teams WHERE id=${id} FOR UPDATE`;
       if (!team) throw new InputError('Team not found.', 404);
+      if (team.name !== data.name) parse(teamNameInput, data.name);
       const [profile] =
         await tx`SELECT revision FROM team_profiles WHERE team_id=${id}`;
       if (!('revision' in data) || data.revision !== (profile?.revision ?? 0))

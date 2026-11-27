@@ -142,7 +142,7 @@ it('starts eleven independent judges and saves one evidence-backed scorecard per
   await configure(new Date(Date.now() + 30_000).toISOString(), officialRubric);
   await Promise.all(
     Array.from({ length: 11 }, async (_, i) => {
-      const t = await requireTeam(await addTeam('Fixture ' + i));
+      const t = await requireTeam(await addTeam('Fixture_' + i));
       await saveSubmission(t.id, 'Fixture ' + i, 'tax-B', {
         bytes: Buffer.from('fixture-' + i),
         filename: 'result.md',
@@ -173,6 +173,6 @@ it('starts eleven independent judges and saves one evidence-backed scorecard per
     expect(t.scorecard?.rows.length).toBe(4);
     const obs =
       await db()`SELECT output FROM observations WHERE run_id=${t.run_id} AND ref='V01-1'`;
-    expect(obs[0].output).toBe('exit 0\nfixture-' + t.name.split(' ')[1]);
+    expect(obs[0].output).toBe('exit 0\nfixture-' + t.name.split('_')[1]);
   }
 }, 30_000);

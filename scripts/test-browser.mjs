@@ -62,7 +62,7 @@ try {
     }),
     errors = [];
   desk.on('pageerror', (e) => errors.push(e.message));
-  const name = 'Team Portal QA',
+  const name = 'Team_Portal_QA',
     teamPassword = 'private-fixture-pass';
   const p = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   p.on('pageerror', (e) => errors.push(e.message));
@@ -77,6 +77,9 @@ try {
   await p.goto(origin + '/');
   await p.getByRole('heading', { name: 'Project submission' }).waitFor();
   assert.equal(new URL(p.url()).pathname, '/submit');
+  const directoryUrl = origin + '/api/team/directory';
+  assert.equal((await p.request.get(directoryUrl)).status(), 401);
+  assert.equal(await p.getByRole('button', { name: 'Other teams' }).count(), 0);
   await p.getByLabel('Project title').fill('Draft before signup');
   await p.getByRole('radio', { name: 'File upload' }).check();
   await p.locator('input[type=file]').setInputFiles({
@@ -117,7 +120,12 @@ try {
   );
   await p.getByRole('button', { name: 'Register a team' }).click();
   await p.getByRole('heading', { name: 'Register your team' }).waitFor();
-  await p.getByLabel('Team name', { exact: true }).fill(name);
+  const signupName = p.getByLabel('Team name', { exact: true });
+  await signupName.fill('Bad name');
+  assert.ok(
+    await signupName.evaluate((input) => input.validity.patternMismatch),
+  );
+  await signupName.fill(name);
   await p.locator('input[name=password]').fill(teamPassword);
   const names = [
     ['Jae', 'Park'],
@@ -140,6 +148,48 @@ try {
   assert.equal(await p.getByText('Ada Fern').count(), 0);
   const me = await (await p.request.get(origin + '/api/team/me')).json();
   const creds = { name, password: teamPassword, members: me.members };
+  for (const invalid of [
+    'Team Name',
+    'Trailing ',
+    ' Leading',
+    'two-parts',
+    'name.with.dot',
+    'line\nbreak',
+  ]) {
+    assert.equal(
+      (
+        await p.request.post(origin + '/api/team/register', {
+          data: { ...creds, name: invalid },
+        })
+      ).status(),
+      400,
+    );
+  }
+  const peers = await Promise.all([browser.newContext(), browser.newContext()]);
+  await Promise.all(
+    peers.map(async (peer) => {
+      const res = await peer.request.post(origin + '/api/team/login', {
+        data: { name: name.toUpperCase(), password: teamPassword },
+      });
+      assert.equal(res.status(), 200);
+      assert.equal(
+        (await (await peer.request.get(origin + '/api/team/me')).json()).id,
+        me.id,
+      );
+      assert.deepEqual(await (await peer.request.get(directoryUrl)).json(), []);
+    }),
+  );
+  assert.equal(
+    (await peers[0].request.post(origin + '/api/team/logout')).status(),
+    200,
+  );
+  assert.equal((await peers[0].request.get(directoryUrl)).status(), 401);
+  assert.equal((await peers[1].request.get(directoryUrl)).status(), 200);
+  assert.equal((await p.request.get(directoryUrl)).status(), 200);
+  await Promise.all(peers.map((peer) => peer.close()));
+  await p.getByRole('button', { name: 'Other teams' }).click();
+  await p.getByText('No other teams have registered yet.').waitFor();
+  await p.getByRole('button', { name: 'Other teams' }).click();
   for (const members of [[], [...me.members, me.members[0]]]) {
     assert.equal(
       (
@@ -179,6 +229,27 @@ try {
   await desk.goto(origin + '/admin');
   await desk.locator('input[name=password]').fill(password);
   await desk.getByRole('button', { name: 'Log in' }).click();
+  assert.equal((await desk.request.get(directoryUrl)).status(), 401);
+  assert.equal(
+    (
+      await desk.request.post(origin + '/api/admin/teams', {
+        data: { ...creds, name: 'Bad admin name' },
+      })
+    ).status(),
+    400,
+  );
+  assert.equal(
+    (
+      await desk.request.patch(origin + '/api/admin/teams/' + me.id, {
+        data: {
+          name: 'Bad-rename',
+          members: me.members,
+          revision: me.revision,
+        },
+      })
+    ).status(),
+    400,
+  );
   await desk.getByRole('button', { name: name + ' 3 members' }).click();
   await desk.getByText('Ren Weiss').waitFor();
   await desk.getByRole('button', { name: 'Edit team' }).click();
@@ -195,7 +266,7 @@ try {
     409,
   );
   await desk.getByRole('button', { name: 'Create team' }).click();
-  await desk.getByLabel('Team name', { exact: true }).fill('Solo fixture');
+  await desk.getByLabel('Team name', { exact: true }).fill('Solo_fixture');
   await desk.locator('input[name=password]').fill(teamPassword);
   await desk.getByLabel('First name', { exact: true }).fill('Sam');
   await desk.getByLabel('Surname', { exact: true }).fill('Gray');
@@ -203,11 +274,11 @@ try {
     .locator('form')
     .getByRole('button', { name: 'Create team' })
     .click();
-  await desk.getByRole('button', { name: 'Solo fixture 1 member' }).click();
+  await desk.getByRole('button', { name: 'Solo_fixture 1 member' }).click();
   await desk.getByText('Sam Gray').waitFor();
   const solo = await browser.newContext();
   const soloLogin = await solo.request.post(origin + '/api/team/login', {
-    data: { name: 'Solo fixture', password: teamPassword },
+    data: { name: 'Solo_fixture', password: teamPassword },
   });
   assert.equal(soloLogin.status(), 200);
   const soloProfile = await (
@@ -216,6 +287,41 @@ try {
   assert.deepEqual(soloProfile.members, [
     { firstName: 'Sam', surname: 'Gray' },
   ]);
+  const listed = await p.request.get(directoryUrl);
+  assert.equal(listed.status(), 200);
+  assert.equal(listed.headers()['cache-control'], 'private, no-store');
+  assert.deepEqual(await listed.json(), [
+    { name: 'Solo_fixture', memberCount: 1 },
+  ]);
+  assert.deepEqual(await (await solo.request.get(directoryUrl)).json(), [
+    { name, memberCount: 2 },
+  ]);
+  await p.getByRole('button', { name: 'Other teams' }).click();
+  const list = p.getByRole('region', { name: 'Other teams' });
+  await list.getByText('Solo_fixture').waitFor();
+  await list.getByText('1 member').waitFor();
+  assert.equal(await list.getByText(name, { exact: true }).count(), 0);
+  // A pre-existing name with spaces remains usable, including for roster-only edits.
+  await isolated`UPDATE teams SET name='Legacy team' WHERE id=${soloProfile.id}`;
+  const legacyData = { name: 'Legacy team', password: teamPassword };
+  assert.equal(
+    (
+      await solo.request.post(origin + '/api/team/login', { data: legacyData })
+    ).status(),
+    200,
+  );
+  assert.equal(
+    (
+      await desk.request.patch(origin + '/api/admin/teams/' + soloProfile.id, {
+        data: {
+          name: legacyData.name,
+          members: soloProfile.members,
+          revision: soloProfile.revision,
+        },
+      })
+    ).status(),
+    200,
+  );
   await solo.close();
   await p.reload();
   await p.getByText(name, { exact: true }).waitFor();
@@ -223,6 +329,8 @@ try {
   await p.getByRole('button', { name: 'Log out' }).click();
   await p.getByRole('button', { name: 'Team login' }).waitFor();
   assert.equal((await p.request.get(origin + '/api/team/me')).status(), 401);
+  assert.equal((await p.request.get(directoryUrl)).status(), 401);
+  assert.equal(await p.getByRole('button', { name: 'Other teams' }).count(), 0);
   assert.equal(
     (
       await p.request.post(origin + '/api/team/login', {
@@ -560,7 +668,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    'Browser pass: registration, roster bounds, duplicate rejection, login/logout, team isolation, admin create/inspect/edit, submission revisions, legacy links, mobile layout, private guide, jury seats, late cutoff, ballots, demo review and podium ties.',
+    'Browser pass: registration, roster bounds, team name validation, concurrent teammate login/logout, signed-in directory, team isolation, admin create/inspect/edit, submission revisions, legacy links, mobile layout, private guide, jury seats, late cutoff, ballots, demo review and podium ties.',
   );
 } finally {
   await browser?.close();

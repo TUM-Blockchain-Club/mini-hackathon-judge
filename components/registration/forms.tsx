@@ -1,6 +1,7 @@
 'use client';
 import { useId, useState, type FormEvent } from 'react';
 import { Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
+import { teamNameHint, teamNamePattern } from '@/lib/team-name';
 import type { Member, TeamProfile } from '@/lib/registration';
 
 export async function send<T = unknown>(
@@ -63,6 +64,7 @@ export function RosterForm({
   onCancel?: () => void;
 }) {
   const group = useId();
+  const [name, setName] = useState(team?.name ?? '');
   const [members, setMembers] = useState(() =>
       (team?.members.length ? team.members : [emptyMember()]).map((m, i) => ({
         ...m,
@@ -119,13 +121,26 @@ export function RosterForm({
         Team name
         <input
           name="name"
-          defaultValue={team?.name}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          pattern={
+            mode === 'edit' && name === team?.name
+              ? undefined
+              : teamNamePattern.source
+          }
+          title={teamNameHint}
+          aria-describedby={group + '-name-hint'}
+          autoCapitalize="none"
+          spellCheck={false}
           required
           maxLength={80}
           autoComplete="off"
-          placeholder="Your team name"
+          placeholder="e.g. Block_Builders"
         />
       </label>
+      <small className="reg-field-help" id={group + '-name-hint'}>
+        {teamNameHint}
+      </small>
       {(mode !== 'edit' || !team?.revision) && <PasswordField create />}
       <div className="reg-members-head">
         <h3>Team members</h3>
@@ -238,7 +253,7 @@ export function LoginForm({
       <p className="reg-intro">
         {admin
           ? 'Sign in to manage team registrations.'
-          : 'Use the team name and password from registration.'}
+          : 'Every teammate signs in with the same team name and password.'}
       </p>
       <form className="reg-form" onSubmit={submit}>
         <label>
