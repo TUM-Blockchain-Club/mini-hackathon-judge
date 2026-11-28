@@ -1,12 +1,13 @@
 import { RegistrationFrame } from '@/components/registration/frame';
 import './desk.css';
 import { Organizer, Login } from '@/components/organizer';
+import { ResultsPreview } from './results-preview';
 import { db } from '@/lib/db';
 import { currentAdmin } from '@/lib/auth';
 import { desk } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Organizer desk' };
-export default async function Page() {
+export default async function Page({ searchParams }: PageProps<'/organizer'>) {
   let content;
   const admin = await currentAdmin();
   if (admin && !admin.owner && !admin.seat) {
@@ -19,6 +20,8 @@ export default async function Page() {
         </a>
       </section>
     );
+  } else if (admin && (await searchParams).preview === 'results') {
+    content = <ResultsPreview />;
   } else if (admin) {
     try {
       const accounts = admin.owner

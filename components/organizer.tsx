@@ -208,6 +208,7 @@ export function Organizer({
           {notice}
         </p>
       )}
+      <p><a className="text-link" href="/organizer?preview=results">Preview mock results ↗</a></p>
       <ProjectOverview data={data} />
       <div className="admin-tools">
         <section className="reg-card">

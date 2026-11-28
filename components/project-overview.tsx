@@ -1,8 +1,9 @@
+'use client';
 import { useState } from 'react';
 import type { desk } from '@/lib/store';
 import { focusLabel, pitchCriteria } from '@/lib/event';
 
-type Desk = Awaited<ReturnType<typeof desk>>;
+type Desk = Pick<Awaited<ReturnType<typeof desk>>, 'teams' | 'rubric'>;
 const views = ['Standings', 'Submission criteria', 'Pitch criteria'] as const;
 const format = (n: number | null | undefined) =>
   n == null

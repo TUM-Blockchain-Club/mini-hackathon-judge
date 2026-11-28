@@ -400,6 +400,17 @@ try {
   await p.getByRole('button', { name: 'Log out' }).waitFor();
   assert.equal(new URL(p.url()).pathname, '/submit');
   await desk.getByRole('link', { name: 'Open judging desk' }).click();
+  await desk.getByRole('link', { name: 'Preview mock results' }).click();
+  await desk.getByRole('heading', { name: 'Mock judging results' }).waitFor();
+  const comparison = desk.getByRole('table');
+  await comparison.getByText('91.5', { exact: true }).waitFor();
+  await comparison.getByText('68.5', { exact: true }).waitFor();
+  await desk.getByRole('button', { name: 'Submission criteria' }).click();
+  await comparison.getByRole('columnheader', { name: 'Correctness /20' }).waitFor();
+  await desk.getByRole('button', { name: 'Pitch criteria' }).click();
+  await comparison.getByRole('columnheader', { name: 'Clarity and timing /10' }).waitFor();
+  await desk.getByRole('link', { name: 'Back to live desk' }).click();
+  assert.equal(await desk.getByText('Exchange fee replay').count(), 0);
   await desk.getByRole('heading', { name: 'Organizer desk' }).waitFor();
   if (
     !(await desk.getByLabel('Deadline in your browser’s time zone').isVisible())
