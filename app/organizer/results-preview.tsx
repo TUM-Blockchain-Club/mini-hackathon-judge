@@ -3,6 +3,7 @@ import { standings } from '@/lib/standings';
 import type { TeamRow } from '@/lib/types';
 import {
   officialCriteria,
+  pitchCriteria,
   officialPoints,
   officialRubric,
 } from '@/judge/official';
@@ -109,7 +110,7 @@ export function ResultsPreview() {
         </a>
       </div>
       <p>Read-only preview with three fictional submissions.</p>
-      <ProjectOverview data={{ teams, rubric: officialRubric }} />
+      <ProjectOverview data={{ teams, rubric: officialRubric, pitchCriteria }} />
       <section className="reg-card setup">
         <h2>Project reviews</h2>
         {teams.map((team) => (

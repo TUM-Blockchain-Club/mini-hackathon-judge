@@ -14,7 +14,7 @@ import { ProjectOverview } from './project-overview';
 import { JuryScorecard } from './jury-scorecard';
 import type { desk } from '@/lib/store';
 import type { Admin } from '@/lib/auth';
-import { eventDate, focusLabel, pitchCriteria } from '@/lib/event';
+import { eventDate, focusLabel } from '@/lib/event';
 async function post(action: string, body: unknown) {
   const res = await fetch('/api/organizer/' + action, {
     method: 'POST',
@@ -159,7 +159,7 @@ export function Organizer({
       {
         team,
         ...Object.fromEntries(
-          pitchCriteria.map((c) => [c.id, Number(f.get(c.id))]),
+          data.pitchCriteria.map((c) => [c.id, Number(f.get(c.id))]),
         ),
       },
       () => setNotice('Pitch score saved.'),
@@ -359,7 +359,7 @@ export function Organizer({
               <p className="notice">
                 Jury review · {t.jury_review.requirement} ·{' '}
                 {t.jury_review.label} · {t.jury_review.note} · S1{' '}
-                {t.jury_review.correctness}/20{' '}
+                {t.jury_review.correctness}/{t.rubric?.criteria.find((c) => c.id === 'S1')?.max}{' '}
                 {t.jury_review.disqualified && '· Disqualified'}
               </p>
             )}
@@ -367,7 +367,7 @@ export function Organizer({
               <form onSubmit={(e) => ballot(e, t.id)}>
                 <h4>Your pitch ballot</h4>
                 <div className="ballot-grid">
-                  {pitchCriteria.map((c) => (
+                  {data.pitchCriteria.map((c) => (
                     <label key={c.id}>
                       {c.label} (/{c.max})
                       <input

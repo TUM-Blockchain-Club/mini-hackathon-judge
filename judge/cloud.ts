@@ -86,7 +86,7 @@ export async function cloudLauncher() {
     snapshot: container.image as string,
     async approvedGuide() {
       const res = await fetch(
-        'https://storage.googleapis.com/storage/v1/b/tbc-mini-hackathon-judge-private-guide-60883640786/o/approved.md?alt=media',
+        'https://storage.googleapis.com/storage/v1/b/tbc-mini-hackathon-judge-private-guide-60883640786/o/approved-f62e56cc1a38.md?alt=media',
         {
           headers,
           cache: 'no-store',
@@ -101,7 +101,7 @@ export async function cloudLauncher() {
       const guide = await res.text();
       if (
         createHash('sha256').update(guide).digest('hex') !==
-        '29b7fe0c17cd1fbec491dc76ea987c1e7ec31670bbbce46efd380f37264aa6ce'
+        'f62e56cc1a38a26d8cea06b35c5f91d7e9b2ebd72c50b9bdafd786d588ea3534'
       )
         throw new InputError(
           'The private guide does not match the approved revision. Restore the approved file before starting.',

@@ -139,3 +139,16 @@ test('three ballots, one late deduction and auditable podium decisions', () => {
   assert.equal(fraction[0].id, 'x');
   assert.equal(fraction[0].place, 1);
 });
+
+test('retired guide rows stay out of the frozen instructions and required checks', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const { trackGuide } = await import('../judge/guide');
+  const fixture = await readFile(new URL('./fixtures/jury-guide.md', import.meta.url), 'utf8');
+  const revised = fixture.replace('Fixture inputs', '[Retired] Fixture inputs');
+  for (const focus of ['tax-B', 'wallet-A', 'exchange-C']) {
+    const guide = trackGuide(revised, focus);
+    assert.ok(guide.ids.includes('R0-1'));
+    assert.ok(!guide.ids.includes('R0-2'));
+    assert.ok(!guide.instructions.includes('Fixture inputs'));
+  }
+});

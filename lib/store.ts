@@ -3,6 +3,7 @@ import {
   officialRubric,
   officialVersion,
   officialPoints,
+  pitchCriteria,
 } from '../judge/official';
 import { trackGuide } from '../judge/guide';
 import { standings, type TieDecision } from './standings';
@@ -261,6 +262,7 @@ export async function desk(adminId: string | null = null) {
     started: !!event.started_at,
     guideReady: !!event.started_at && !!event.guide_ready,
     rubric: (event.rubric ?? officialRubric) as Rubric,
+    pitchCriteria,
     teams: standings(teams, decisions),
   };
 }

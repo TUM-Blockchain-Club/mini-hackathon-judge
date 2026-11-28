@@ -28,7 +28,7 @@ export const officialCriteria: Criterion[] = [
     title: 'Evidence and reproducibility',
     max: 15,
     guidance:
-      'Assess sources, dates, procedure, peer reproduction and limitations.',
+      'Assess the evidence in the submitted work using the applicable private guide.',
   },
   {
     id: 'S4',
@@ -108,3 +108,10 @@ export function validateOfficial(
   }
   return officialPoints(card, card.efficiencyApplicable);
 }
+
+export const pitchCriteria = [
+  { id: 'p1', label: 'Result and demonstration', max: 15 },
+  { id: 'p2', label: 'Usefulness for LIGHT UP and readers', max: 15 },
+  { id: 'p3', label: 'Evidence and reproducibility', max: 10 },
+  { id: 'p4', label: 'Clarity and timing', max: 10 },
+] as const;

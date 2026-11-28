@@ -11,6 +11,7 @@ export function JuryScorecard({
   busy: boolean;
   onReview: (data: unknown) => void;
 }) {
+  const correctness = t.rubric?.criteria.find((c) => c.id === 'S1');
   const card = t.scorecard;
   if (!card) return null;
   return (
@@ -53,7 +54,7 @@ export function JuryScorecard({
             Efficiency{' '}
             {card.efficiencyApplicable
               ? 'applicable'
-              : 'excluded · S1–S3 scaled from 45 to 50'}
+              : 'exempt from the submission total'}
           </p>
         </>
       )}
@@ -84,7 +85,7 @@ export function JuryScorecard({
                 {t.history.map((r, i) => (
                   <li key={i}>
                     {r.requirement} · {r.label} · {r.note} · S1 {r.correctness}
-                    /20
+                    /{correctness?.max}
                   </li>
                 ))}
               </ul>
@@ -96,7 +97,7 @@ export function JuryScorecard({
               <li key={i}>{q}</li>
             ))}
           </ul>
-          {canReview && (
+          {canReview && correctness && (
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -142,9 +143,9 @@ export function JuryScorecard({
                     card.rows.find((r) => r.id === 'S1')?.points
                   }
                 >
-                  {[0, 10, 20].map((n) => (
+                  {[0, correctness.max / 2, correctness.max].map((n) => (
                     <option key={n} value={n}>
-                      {n}/20
+                      {n}/{correctness.max}
                     </option>
                   ))}
                 </select>

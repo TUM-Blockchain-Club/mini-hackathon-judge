@@ -108,27 +108,10 @@ export function ParticipantBoard({
         <section className="reg-card">
           <h2>What to submit</h2>
           <ul>
-            <li>
-              Enter your <strong>project name</strong>, a description of up to
-              500 characters, your track and your focus.
-            </li>
-            <li>
-              Submit your <strong>public GitHub repository URL</strong>, for
-              example <code>https://github.com/team/project</code>.
-            </li>
-            <li>
-              You can submit early and keep working. Your receipt records the
-              version at submission. Judging uses the latest default-branch
-              commit dated at or before the cutoff.
-            </li>
-            <li>
-              Include instructions for reproducing your result and explain how
-              your scoring weights add up to 100.
-            </li>
-            <li>
-              Ask another team to reproduce one result and record what they
-              found.
-            </li>
+            <li>Project name and description (up to 500 characters)</li>
+            <li>Track and focus</li>
+            <li>Public GitHub repository URL</li>
+            <li>Pitch deck on the default branch</li>
           </ul>
         </section>
         <section className="reg-card">

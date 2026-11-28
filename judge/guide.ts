@@ -21,9 +21,9 @@ export function trackGuide(raw: string, focus: string) {
   const track = part(text, from, to);
   const common = part(text, '## 1.', '### 2.1');
   const evidence = part(text, '## 3.', '## 4.');
-  const instructions = common + track + evidence;
+  const sectionsText = common + track + evidence;
   const ids = [
-    ...instructions.matchAll(/^\| ((?:R0-\d+|(?:EX|WA|TX)-[ABC]\d+)) \|/gm),
+    ...sectionsText.matchAll(/^\| ((?:R0-\d+|(?:EX|WA|TX)-[ABC]\d+)) \|/gm),
   ].map((m) => m[1]);
   if (
     new Set(ids).size !== ids.length ||
@@ -33,7 +33,10 @@ export function trackGuide(raw: string, focus: string) {
     !ids.some((id) => id.startsWith(prefix))
   )
     throw new InputError('Missing requirement tables in judging guide.');
-  return { instructions, ids, revision: digest(raw) };
+  // Keep retired rows in the private document for its revision history only.
+  const instructions = sectionsText.split('\n').filter((line) => !/^\| [A-Z0-9-]+ \| \[Retired\]/.test(line)).join('\n');
+  const activeIds = ids.filter((id) => instructions.includes('| ' + id + ' |'));
+  return { instructions, ids: activeIds, revision: digest(raw) };
 }
 export function validateGuide(raw: unknown) {
   if (

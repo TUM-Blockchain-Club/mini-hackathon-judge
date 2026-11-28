@@ -1,9 +1,9 @@
 'use client';
 import { useState } from 'react';
 import type { desk } from '@/lib/store';
-import { focusLabel, pitchCriteria } from '@/lib/event';
+import { focusLabel } from '@/lib/event';
 
-type Desk = Pick<Awaited<ReturnType<typeof desk>>, 'teams' | 'rubric'>;
+type Desk = Pick<Awaited<ReturnType<typeof desk>>, 'teams' | 'rubric' | 'pitchCriteria'>;
 const views = ['Standings', 'Submission criteria', 'Pitch criteria'] as const;
 const format = (n: number | null | undefined) =>
   n == null
@@ -161,7 +161,7 @@ export function ProjectOverview({ data }: { data: Desk }) {
                         <small>{t.ballots}/3 ballots</small>
                         {t.pitch_means ? (
                           <dl>
-                            {pitchCriteria.map((c) => (
+                            {data.pitchCriteria.map((c) => (
                               <div key={c.id}>
                                 <dt>{c.label}</dt>
                                 <dd>
@@ -189,8 +189,7 @@ export function ProjectOverview({ data }: { data: Desk }) {
             )}
             {view === 'Submission criteria' && (
               <p className="desk-note">
-                Points use each project’s rubric. When efficiency is exempt, the
-                remaining 45 points scale to 50.
+                Points use each project’s rubric. Exempt criteria are excluded from the submission total.
               </p>
             )}
           </>
