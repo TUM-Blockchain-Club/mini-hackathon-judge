@@ -117,7 +117,7 @@ export function ParticipantBoard({
           <h2>Your five-minute demo</h2>
           <p>
             <strong>
-              Pitches and awards · Saturday, 28 November · 17:00–18:00 CET
+              17:00–18:00 CET
             </strong>
           </p>
           <ul>
