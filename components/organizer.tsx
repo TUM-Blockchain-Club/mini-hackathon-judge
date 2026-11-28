@@ -288,7 +288,7 @@ export function Organizer({
                 />
               </label>
               <small>
-                The same deadline applies to default-branch commits. Late entries
+                The commit cutoff is five minutes after this deadline. Late entries
                 close ten minutes after it. Saving recalculates the five-point
                 deduction for accepted submissions.
               </small>

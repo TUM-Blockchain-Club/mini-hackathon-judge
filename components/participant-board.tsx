@@ -51,14 +51,12 @@ export function ParticipantBoard({
           </strong>
           {commitDeadline && (
             <p>
-              Push your final work and pitch deck to the default branch by{' '}
-              <b>{eventDate(commitDeadline)}</b>.
+              <strong>Push your final work and pitch deck to the default branch by {eventDate(commitDeadline)}.</strong>
             </p>
           )}
           {closes && (
             <p>
-              Late submissions close at <b>{eventDate(closes)}</b> and cost 5
-              points.
+              <strong>Late submissions close at {eventDate(closes)} and cost 5 points.</strong>
             </p>
           )}
           {(state === 'closed' || state === 'late') && (

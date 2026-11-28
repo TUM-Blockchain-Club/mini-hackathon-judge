@@ -199,7 +199,7 @@ export function SubmissionDesk({ board }: { board: boolean }) {
           <Submission
             key={team.id}
             state={desk.state}
-            deadline={desk.deadline}
+            commitDeadline={desk.commitDeadline}
             teamId={team.id}
             teamName={team.name}
             receipt={desk.receipt}

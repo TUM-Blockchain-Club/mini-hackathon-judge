@@ -4,7 +4,7 @@ import { tracks, eventDate, focusLabel, ownTopicLimit } from '@/lib/event';
 import type { SubmissionReceipt } from '@/lib/types';
 export function Submission({
   state,
-  deadline,
+  commitDeadline,
   teamId,
   teamName,
   receipt,
@@ -12,7 +12,7 @@ export function Submission({
   refresh,
 }: {
   state: string;
-  deadline?: string;
+  commitDeadline?: string;
   teamId: string;
   teamName: string;
   receipt: SubmissionReceipt | null;
@@ -24,7 +24,7 @@ export function Submission({
     [editing, setEditing] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
-  const cutoff = deadline ? eventDate(deadline) : 'the commit cutoff';
+  const cutoff = commitDeadline ? eventDate(commitDeadline) : 'the commit cutoff';
   const open = state === 'open' || state === 'late';
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
