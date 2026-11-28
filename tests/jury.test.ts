@@ -78,6 +78,7 @@ function team(
     legacy_pitch: null,
     late,
     run_id: id,
+    pitch_means: null,
     my_ballot: null,
     submission: id,
     title: id,

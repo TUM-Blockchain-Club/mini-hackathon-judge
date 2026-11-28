@@ -217,12 +217,13 @@ export async function desk(adminId: string | null = null) {
     sql`SELECT deadline,started_at,rubric,guide IS NOT NULL AS guide_ready FROM event_settings WHERE singleton`,
     sql<
       TeamRow[]
-    >`SELECT t.id,t.name,t.pitch AS legacy_pitch,b.ballots,b.pitch_sum,b.my_ballot,
+    >`SELECT t.id,t.name,t.pitch AS legacy_pitch,b.ballots,b.pitch_sum,b.pitch_means,b.my_ballot,
       s.id AS submission,s.title,s.focus,s.own_topic,s.digest,s.source,s.filename,s.submitted_at::text,s.late,
       j.id AS run_id,j.phase,j.points,j.issue,j.rubric->'guide'->>'revision' AS guide_revision,j.rubric-'guide' AS rubric,j.scorecard,j.jury_review,coalesce((SELECT jsonb_agg(d.decision ORDER BY d.id) FROM jury_decisions d WHERE d.run_id=j.id),'[]'::jsonb) AS history
       FROM teams t LEFT JOIN LATERAL (SELECT * FROM submissions WHERE team_id=t.id ORDER BY submitted_at DESC,id DESC LIMIT 1) s ON true
       LEFT JOIN judge_runs j ON j.submission_id=s.id
       CROSS JOIN LATERAL (SELECT count(*)::int AS ballots,coalesce(sum(p1+p2+p3+p4),0)::int AS pitch_sum,
+       CASE WHEN count(*)=3 THEN jsonb_build_object('p1',avg(p1),'p2',avg(p2),'p3',avg(p3),'p4',avg(p4)) END AS pitch_means,
        (jsonb_agg(to_jsonb(v)-'admin_id'-'team_id') FILTER (WHERE admin_id=${adminId}::uuid))->0 AS my_ballot
        FROM pitch_ballots v WHERE v.team_id=t.id) b`,
     sql<TieDecision[]>`SELECT * FROM podium_decisions`,

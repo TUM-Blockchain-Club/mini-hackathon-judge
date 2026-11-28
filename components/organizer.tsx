@@ -10,6 +10,7 @@ import {
   LockKeyhole,
 } from 'lucide-react';
 import { AdminAccounts, type Account } from './admin-accounts';
+import { ProjectOverview } from './project-overview';
 import { JuryScorecard } from './jury-scorecard';
 import type { desk } from '@/lib/store';
 import type { Admin } from '@/lib/auth';
@@ -49,15 +50,15 @@ export function Login() {
     }
   }
   return (
-    <section className="panel login">
+    <section className="reg-card login">
       <div className="icon-tile">
         <LockKeyhole />
       </div>
       <h1>
-        Organizer desk<span>.</span>
+        Organizer desk
       </h1>
       <p>Sign in to manage teams, judging and pitch scores.</p>
-      <form onSubmit={submit}>
+      <form className="reg-form" onSubmit={submit}>
         <label>
           Admin name
           <input
@@ -81,7 +82,7 @@ export function Login() {
             {error}
           </p>
         )}
-        <button className="primary" disabled={busy}>
+        <button className="reg-primary" disabled={busy}>
           <KeyRound size={16} />
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
@@ -186,10 +187,10 @@ export function Organizer({
       </p>
       <div className="admin-head">
         <h1>
-          Organizer desk<span>.</span>
+          Organizer desk
         </h1>
         <button
-          className="button"
+          className="reg-secondary"
           disabled={!!busy}
           onClick={() => act('logout', {})}
         >
@@ -207,19 +208,20 @@ export function Organizer({
           {notice}
         </p>
       )}
+      <ProjectOverview data={data} />
       <div className="admin-tools">
-        <section className="panel">
+        <section className="reg-card">
           <h2>Team registration</h2>
           <p>
             Inspect registered teams, add members and update names in team
             administration.
           </p>
-          <a className="button" href="/admin">
+          <a className="reg-secondary" href="/admin">
             Manage teams
           </a>
         </section>
         {admin.owner && (
-          <section className="panel">
+          <section className="reg-card">
             <h2>Judging batch</h2>
             <p>
               {submitted} submitted · {data.teams.length} registered
@@ -231,7 +233,7 @@ export function Organizer({
             </p>
             <div className="actions">
               <button
-                className="primary"
+                className="reg-primary"
                 disabled={
                   !!busy ||
                   !submitted ||
@@ -253,7 +255,7 @@ export function Organizer({
                 <Play size={15} />
                 {data.started ? 'Resume dispatch' : 'Start judging'}
               </button>
-              <button className="button" onClick={() => router.refresh()}>
+              <button className="reg-secondary" onClick={() => router.refresh()}>
                 <RefreshCw size={15} />
                 Refresh
               </button>
@@ -281,7 +283,7 @@ export function Organizer({
             act={act}
             setNotice={setNotice}
           />
-          <details className="panel setup" open={!data.guideReady || undefined}>
+          <details className="reg-card setup" open={!data.guideReady || undefined}>
             <summary>Deadline and evaluation rubric</summary>
             <form onSubmit={settings}>
               <label>
@@ -298,7 +300,7 @@ export function Organizer({
                 Late entries close ten minutes later and lose five overall
                 points.
               </small>
-              <button className="button" disabled={!!busy || data.started}>
+              <button className="reg-secondary" disabled={!!busy || data.started}>
                 Save event settings
               </button>
             </form>
@@ -320,18 +322,18 @@ export function Organizer({
                 Starting the batch freezes the guide and each team’s latest
                 accepted submission.
               </small>
-              <button className="button" disabled={!!busy || data.started}>
+              <button className="reg-secondary" disabled={!!busy || data.started}>
                 Import guide
               </button>
             </form>
           </details>
         </>
       )}
-      <section className="panel">
-        <h2>Submissions &amp; standings</h2>
-        {!data.teams.length && <p>No teams have registered yet.</p>}
-        {data.teams.map((t) => (
-          <article className="team-row" key={t.id}>
+      <section className="reg-card">
+        <h2>Project reviews</h2>
+        {!submitted && <p>Scorecards and pitch ballots appear here when teams submit.</p>}
+        {data.teams.filter((t) => t.submission).map((t) => (
+          <article className="team-row" id={'project-' + t.id} key={t.id}>
             <div className="row-head">
               <h3>{t.name}</h3>
               <span className="status">
@@ -406,7 +408,7 @@ export function Organizer({
                     </label>
                   ))}
                 </div>
-                <button className="button" disabled={!!busy}>
+                <button className="reg-secondary" disabled={!!busy}>
                   Save pitch
                 </button>
               </form>
@@ -452,7 +454,7 @@ export function Organizer({
                       Jury rationale
                       <input name="reason" required maxLength={1200} />
                     </label>
-                    <button className="button" disabled={!!busy}>
+                    <button className="reg-secondary" disabled={!!busy}>
                       Save tie decision
                     </button>
                   </form>

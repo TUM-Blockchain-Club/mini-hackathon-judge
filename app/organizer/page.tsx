@@ -1,4 +1,5 @@
-import { Header, Footer } from '@/components/chrome';
+import { RegistrationFrame } from '@/components/registration/frame';
+import './desk.css';
 import { Organizer, Login } from '@/components/organizer';
 import { db } from '@/lib/db';
 import { currentAdmin } from '@/lib/auth';
@@ -10,10 +11,10 @@ export default async function Page() {
   const admin = await currentAdmin();
   if (admin && !admin.owner && !admin.seat) {
     content = (
-      <section className="panel">
+      <section className="reg-card">
         <h1>Team administration</h1>
         <p>Your account can manage team registrations.</p>
-        <a href="/admin" className="button">
+        <a href="/admin" className="reg-secondary">
           Manage teams
         </a>
       </section>
@@ -34,7 +35,7 @@ export default async function Page() {
       );
     } catch {
       content = (
-        <section className="panel login">
+        <section className="reg-card login">
           <h2>Database unavailable</h2>
           <p>Check the event database connection and run the schema setup.</p>
         </section>
@@ -44,10 +45,8 @@ export default async function Page() {
     content = <Login />;
   }
   return (
-    <>
-      <Header />
-      <main className="wrap secondary">{content}</main>
-      <Footer />
-    </>
+    <RegistrationFrame section="organizer">
+      <div className="judging-desk">{content}</div>
+    </RegistrationFrame>
   );
 }

@@ -24,6 +24,7 @@ export type TeamRow = {
   legacy_pitch: number | null;
   ballots: number;
   pitch_sum: number;
+  pitch_means: Record<'p1' | 'p2' | 'p3' | 'p4', number> | null;
   my_ballot: { p1: number; p2: number; p3: number; p4: number } | null;
   submission: string | null;
   title: string | null;

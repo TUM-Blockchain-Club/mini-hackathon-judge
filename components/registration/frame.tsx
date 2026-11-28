@@ -8,7 +8,7 @@ export function RegistrationFrame({
   section,
   children,
 }: {
-  section: 'submit' | 'resources' | 'admin';
+  section: 'submit' | 'resources' | 'admin' | 'organizer';
   children: ReactNode;
 }) {
   return (

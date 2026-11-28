@@ -246,6 +246,7 @@ try {
   await desk.goto(origin + '/admin');
   await desk.locator('input[name=password]').fill(password);
   await desk.getByRole('button', { name: 'Log in' }).click();
+  await desk.getByRole('link', { name: 'Open judging desk' }).waitFor();
   assert.equal((await desk.request.get(directoryUrl)).status(), 401);
   assert.equal(
     (
@@ -722,6 +723,19 @@ try {
   });
   await invitedRow.getByText('Place 1', { exact: true }).waitFor();
   await invitedRow.getByText('Overall 63%').waitFor();
+  await desk.getByRole('button', { name: 'Pitch criteria' }).click();
+  const pitchTable = desk.getByRole('table', { name: 'Pitch criteria' });
+  const pitchRow = pitchTable.getByRole('row').filter({ hasText: 'Invite fixture' });
+  assert.deepEqual(await pitchRow.getByRole('cell').allTextContents(), ['15', '10', '9', '9']);
+  await desk.getByRole('button', { name: 'Submission criteria' }).click();
+  const criteriaTable = desk.getByRole('table', { name: 'Submission criteria' });
+  const criteriaRow = criteriaTable.getByRole('row').filter({ hasText: 'Invite fixture' });
+  assert.deepEqual(await criteriaRow.getByRole('cell').allTextContents(), ['10', '5', '7.5', '2.5']);
+  await desk.setViewportSize({ width: 375, height: 812 });
+  assert.equal(await desk.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  await criteriaRow.getByRole('link').click();
+  assert.equal(new URL(desk.url()).hash, '#project-' + inviteTeam.id);
+  await desk.setViewportSize({ width: 1440, height: 1000 });
   // Equalize the pitch and submission components to trigger an unresolved tie.
   await isolated`UPDATE pitch_ballots SET p1=10 WHERE team_id=${inviteTeam.id}`;
   await isolated`UPDATE judge_runs SET points=30 WHERE submission_id IN (SELECT id FROM submissions WHERE team_id=${inviteTeam.id})`;

@@ -1,0 +1,144 @@
+.judging-desk {
+  --ink: var(--text);
+  --line: var(--edge);
+  --muted: var(--soft);
+  overflow-wrap: anywhere;
+}
+.judging-desk .admin-head h1 {
+  font-size: clamp(32px, 5vw, 48px);
+  letter-spacing: -0.06em;
+}
+.judging-desk .kicker {
+  color: var(--soft);
+}
+.judging-desk .icon-tile,
+.judging-desk .status {
+  background: var(--bg);
+  color: var(--brand);
+  border: 1px solid var(--edge);
+  border-radius: 0;
+}
+.judging-desk .reg-card p,
+.judging-desk small {
+  color: var(--soft);
+}
+.judging-desk :is(input, textarea, select) {
+  background: var(--bg);
+  border: 1px solid var(--edge);
+  color: var(--text);
+  border-radius: 0;
+}
+.judging-desk :is(.button, .panel) {
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--edge);
+}
+.judging-desk .text-link,
+.desk-scroll a {
+  color: var(--brand);
+}
+.judging-desk :focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.judging-desk .admin-tools .actions,
+.judging-desk .admin-tools .reg-secondary {
+  margin-top: 10px;
+}
+.judging-desk .admin-tools .actions .reg-secondary {
+  margin: 0;
+}
+.desk-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid var(--edge);
+  background: var(--edge);
+  margin: 0 0 20px;
+}
+.desk-metrics > div {
+  background: var(--surface);
+  padding: clamp(14px, 2vw, 26px);
+}
+.desk-metrics dt {
+  font-size: 13px;
+  font-weight: 700;
+}
+.desk-metrics dd {
+  margin: 0;
+}
+.desk-metrics dd:first-of-type {
+  color: var(--brand);
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 720;
+  letter-spacing: -0.06em;
+}
+.desk-metrics dd:last-child,
+.desk-note,
+.desk-awaiting {
+  font-size: 13px;
+  color: var(--soft);
+}
+.desk-views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 24px 0 16px;
+}
+.desk-views button {
+  padding: 8px 12px;
+  border: 1px solid var(--edge);
+  background: transparent;
+  color: var(--soft);
+  font: inherit;
+  font-size: 13px;
+}
+.desk-views button[aria-pressed='true'] {
+  color: var(--bg);
+  background: var(--brand);
+  border-color: var(--brand);
+  font-weight: 700;
+}
+.desk-scroll {
+  overflow-x: auto;
+}
+.desk-scroll table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+.desk-scroll :is(th, td) {
+  text-align: left;
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--edge);
+  min-width: 90px;
+  font-variant-numeric: tabular-nums;
+}
+.desk-scroll thead th {
+  background: var(--bg);
+  color: var(--soft);
+  font-size: 12px;
+  vertical-align: bottom;
+}
+.desk-scroll th:first-child {
+  min-width: 175px;
+}
+.desk-scroll small {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.desk-note,
+.desk-awaiting {
+  margin: 16px 0 0;
+}
+.judging-desk .team-row {
+  scroll-margin-top: 18px;
+}
+@media (max-width: 690px) {
+  .desk-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
