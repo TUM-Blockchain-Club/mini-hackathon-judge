@@ -11,6 +11,10 @@ const sections = [
         href: '/docs/participant-materials.zip',
       },
       {
+        label: 'Andi’s LIGHT UP hackathon slides (PDF)',
+        href: '/docs/light-up-hackathon-slides.pdf',
+      },
+      {
         label: 'Student AI tools setup guide (PDF)',
         href: '/docs/student-ai-tools.pdf',
       },

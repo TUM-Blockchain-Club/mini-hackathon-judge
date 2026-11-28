@@ -160,6 +160,7 @@ try {
     ),
     [
       '/docs/participant-materials.zip',
+      '/docs/light-up-hackathon-slides.pdf',
       '/docs/student-ai-tools.pdf',
       'https://github.com/andi-lightup/lightup-tbc-hackathon',
       'https://lightupkryptos.de/so-testen-wir/',
@@ -168,12 +169,14 @@ try {
       'https://youtu.be/Vs46Y9VhqGM',
     ],
   );
-  const guide = await p.request.get(origin + '/docs/student-ai-tools.pdf');
-  assert.equal(guide.status(), 200);
-  assert.match(guide.headers()['content-type'], /^application\/pdf\b/);
-  const guideBytes = await guide.body();
-  assert.equal(guideBytes.subarray(0, 5).toString(), '%PDF-');
-  assert.ok(guideBytes.subarray(-32).includes('%%EOF'));
+  for (const filename of ['light-up-hackathon-slides.pdf', 'student-ai-tools.pdf']) {
+    const pdf = await p.request.get(origin + '/docs/' + filename);
+    assert.equal(pdf.status(), 200);
+    assert.match(pdf.headers()['content-type'], /^application\/pdf\b/);
+    const bytes = await pdf.body();
+    assert.equal(bytes.subarray(0, 5).toString(), '%PDF-');
+    assert.ok(bytes.subarray(-32).includes('%%EOF'));
+  }
   assert.equal(
     await p.getByRole('textbox', { name: 'Project name' }).count(),
     0,
