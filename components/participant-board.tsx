@@ -123,7 +123,6 @@ export function ParticipantBoard({
           <ul>
             <li>
               The first <strong>five minutes</strong> are yours to present.
-              We’ll save questions for the end.
             </li>
             <li>Show us what you tried, what you found and how LIGHT UP could use it. One example is plenty.</li>
             <li>After your demo, we’ll have a <strong>short Q&amp;A</strong>.</li>
