@@ -19,6 +19,7 @@ export async function publicEvent() {
       await db()`SELECT deadline, deadline + interval '10 minutes' AS closes, started_at, clock_timestamp() AS stamp FROM event_settings WHERE singleton`;
     return {
       deadline: e.deadline?.toISOString() as string | undefined,
+      commitDeadline: e.deadline ? commitCutoff(e.deadline).toISOString() : undefined,
       closes: e.closes?.toISOString() as string | undefined,
       state: !e.deadline
         ? 'pending'

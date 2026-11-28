@@ -126,7 +126,21 @@ try {
   assert.equal(await p.getByRole('button', { name: 'Add member' }).count(), 0);
   await p.getByRole('button', { name: 'Register team' }).click();
   await p.getByRole('button', { name: 'Log out' }).waitFor();
-  assert.equal(new URL(p.url()).pathname, '/submit');
+  await p.getByRole('heading', { name: 'Team board' }).waitFor();
+  const workspace = p.getByRole('navigation', { name: 'Team workspace' });
+  await workspace.getByRole('link', { name: /Submission/ }).waitFor();
+  assert.equal(new URL(p.url()).pathname, '/board');
+  assert.equal(await p.getByRole('link', {name: /full LIGHT UP challenge/}).getAttribute('href'), 'https://github.com/andi-lightup/lightup-tbc-hackathon');
+  for (const width of [320, 1440]) {
+    await p.setViewportSize({width, height: 900});
+    assert.deepEqual(await p.evaluate(() => [...document.querySelectorAll('body *')]
+      .filter((el) => el.getBoundingClientRect().right > innerWidth + 1)
+      .map((el) => [el.tagName, el.className]).slice(0, 12)), []);
+  }
+  await workspace.getByRole('link', {name: /Resources/}).click();
+  await p.getByRole('heading', { name: 'Resources', exact: true }).waitFor();
+  await p.goBack();
+  await workspace.getByRole('link', {name: /Submission/}).click();
   await p.getByLabel('Project name').fill('Signed-in draft');
   await p.getByLabel('GitHub repository link').fill('https://github.com/example/project');
   await p.getByLabel('Short description').fill('A wallet comparison for beginners.');
@@ -395,7 +409,7 @@ try {
   await p.locator('input[name=password]').fill(teamPassword);
   await p.getByRole('button', { name: 'Log in' }).click();
   await p.getByRole('button', { name: 'Log out' }).waitFor();
-  assert.equal(new URL(p.url()).pathname, '/submit');
+  await workspace.getByRole('link', {name: /Submission/}).click();
   await desk.getByRole('link', { name: 'Open judging desk' }).click();
   await desk.getByRole('link', { name: 'Preview mock results' }).click();
   await desk.getByRole('heading', { name: 'Mock judging results' }).waitFor();
@@ -654,6 +668,7 @@ try {
   await p.getByLabel('Team name', { exact: true }).fill(inviteTeam.name);
   await p.locator('input[name=password]').fill(teamPassword);
   await p.getByRole('button', { name: 'Log in' }).click();
+  await workspace.getByRole('link', {name: /Submission/}).click();
   await p.getByLabel('Project name').fill('Invite submission');
   await p.getByLabel('Track', { exact: true }).selectOption('wallet');
   await p.getByLabel('Focus', { exact: true }).selectOption('wallet-A');

@@ -8,7 +8,7 @@ export function RegistrationFrame({
   section,
   children,
 }: {
-  section: 'submit' | 'resources' | 'admin' | 'organizer';
+  section: 'board' | 'submit' | 'resources' | 'admin' | 'organizer';
   children: ReactNode;
 }) {
   return (
@@ -30,6 +30,14 @@ export function RegistrationFrame({
             <span className="reg-brand-short">TBC</span>
           </Link>
           <nav aria-label="Team portal">
+            {section !== 'admin' && section !== 'organizer' && (
+              <Link
+                href="/board"
+                aria-current={section === 'board' ? 'page' : undefined}
+              >
+                Board
+              </Link>
+            )}
             <Link
               href="/submit"
               aria-current={section === 'submit' ? 'page' : undefined}

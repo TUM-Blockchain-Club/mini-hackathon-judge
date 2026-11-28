@@ -10,14 +10,18 @@ export default function ParticipantLayout({
 }: {
   children: ReactNode;
 }) {
-  const resources = useSelectedLayoutSegment() === 'resources';
+  const segment = useSelectedLayoutSegment();
+  const resources = segment === 'resources';
+  const board = segment === 'board';
   return (
-    <RegistrationFrame section={resources ? 'resources' : 'submit'}>
-      <div className="submission-desk">
+    <RegistrationFrame
+      section={resources ? 'resources' : board ? 'board' : 'submit'}
+    >
+      <div className={board ? 'participant-board' : 'submission-desk'}>
         {children}
         {/* Keep the draft, including the browser's file selection, across tab changes. */}
         <Activity mode={resources ? 'hidden' : 'visible'}>
-          <SubmissionDesk />
+          <SubmissionDesk board={board} />
         </Activity>
       </div>
     </RegistrationFrame>

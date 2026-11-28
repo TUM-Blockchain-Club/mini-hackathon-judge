@@ -1,5 +1,7 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ParticipantBoard } from './participant-board';
+import { Activity, useCallback, useEffect, useRef, useState } from 'react';
 import { LoginForm, RosterForm, problem, send } from './registration/forms';
 import { TeamDirectory } from './registration/team-directory';
 import { Submission } from './submission';
@@ -9,13 +11,15 @@ import type { SubmissionReceipt } from '@/lib/types';
 type Desk = {
   state: 'open' | 'late' | 'closed' | 'pending' | 'unavailable';
   deadline?: string;
+  commitDeadline?: string;
   closes?: string;
   team: { id: string; name: string } | null;
   receipt: SubmissionReceipt | null;
 };
 type Access = 'login' | 'signup';
 
-export function SubmissionDesk() {
+export function SubmissionDesk({ board }: { board: boolean }) {
+  const router = useRouter();
   const [desk, setDesk] = useState<Desk | null>(null),
     [access, setAccess] = useState<Access>('login'),
     [error, setError] = useState(''),
@@ -73,15 +77,12 @@ export function SubmissionDesk() {
     const timer = setTimeout(refresh, ms);
     return () => clearTimeout(timer);
   }, [desk, refresh]);
+  useEffect(() => {
+    if (board && desk && !desk.team) router.replace('/submit');
+  }, [board, desk, router]);
   async function identified() {
     await refresh();
-    if (window.location.pathname === '/submit' && window.location.hash) {
-      window.history.replaceState(
-        null,
-        '',
-        window.location.pathname + window.location.search,
-      );
-    }
+    router.replace('/board');
     setAccess('login');
   }
   async function logout() {
@@ -91,7 +92,9 @@ export function SubmissionDesk() {
       previousTeam.current = undefined;
       setDirectoryFor(null);
       setDesk((info) => info && { ...info, team: null, receipt: null });
-      await identified();
+      setAccess('login');
+      router.replace('/submit');
+      await refresh();
     } catch (err) {
       setError(problem(err));
     } finally {
@@ -100,8 +103,8 @@ export function SubmissionDesk() {
   }
   const team = desk?.team;
   return (
-    <section className="reg-card submission-card">
-      {desk?.deadline && (
+    <section className={board ? 'board-shell' : 'reg-card submission-card'}>
+      {!board && desk?.deadline && (
         <p className="submission-deadline">
           Submission deadline <strong>{eventDate(desk.deadline)}</strong>
           {desk.closes && (
@@ -160,15 +163,15 @@ export function SubmissionDesk() {
         )}
       </div>
       {team && directoryFor === team.id && <TeamDirectory key={team.id} />}
-      {desk && !team && access === 'login' && (
+      {!board && desk && !team && access === 'login' && (
         <LoginForm onSuccess={identified} />
       )}
-      {desk && !team && access === 'signup' && (
+      {!board && desk && !team && access === 'signup' && (
         <section className="submission-auth-form" id="signup">
           <h2>Register your team</h2>
           <p className="reg-intro">
-            Register two or three members. Each teammate can sign in on their own
-            device with the shared team name and password. Ask an admin to
+            Register two or three members. Each teammate can sign in on their
+            own device with the shared team name and password. Ask an admin to
             register a solo team or change your roster after signup.
           </p>
           <RosterForm mode="signup" onSaved={identified} />
@@ -182,22 +185,33 @@ export function SubmissionDesk() {
           </button>
         </p>
       )}
-      {desk && team && (
-        <Submission
-          key={team.id}
-          state={desk.state}
+      {board && team && desk && (
+        <ParticipantBoard
           deadline={desk.deadline}
-          teamId={team.id}
-          teamName={team.name}
+          commitDeadline={desk.commitDeadline}
+          closes={desk.closes}
+          state={desk.state}
           receipt={desk.receipt}
-          onSubmitted={(receipt) => {
-            setDesk((info) =>
-              info?.team?.id === team.id ? { ...info, receipt } : info,
-            );
-            void refresh();
-          }}
-          refresh={refresh}
         />
+      )}
+      {desk && team && (
+        <Activity mode={board ? 'hidden' : 'visible'}>
+          <Submission
+            key={team.id}
+            state={desk.state}
+            deadline={desk.deadline}
+            teamId={team.id}
+            teamName={team.name}
+            receipt={desk.receipt}
+            onSubmitted={(receipt) => {
+              setDesk((info) =>
+                info?.team?.id === team.id ? { ...info, receipt } : info,
+              );
+              void refresh();
+            }}
+            refresh={refresh}
+          />
+        </Activity>
       )}
     </section>
   );
