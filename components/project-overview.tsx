@@ -47,13 +47,6 @@ export function ProjectOverview({ data }: { data: Desk }) {
       ]
     );
   }
-  const key = (c: { id: string; title: string; max: number }) =>
-    JSON.stringify([c.id, c.title, c.max]);
-  const columns = Array.from(
-    new Map(
-      projects.flatMap((t) => criteria(t).map((c) => [key(c), c] as const)),
-    ).values(),
-  );
   return (
     <>
       <dl className="desk-metrics">
@@ -85,138 +78,109 @@ export function ProjectOverview({ data }: { data: Desk }) {
                 </button>
               ))}
             </div>
-            <div
-              className="desk-scroll"
-              tabIndex={0}
-              role="region"
-              aria-label={view + ' comparison'}
-            >
-              <table aria-label={view}>
-                {standings && (
-                  <>
-                    <colgroup span={6} />
-                    <colgroup span={columns.length} />
-                    <colgroup span={pitchCriteria.length} />
-                  </>
-                )}
-                <thead>
-                  {standings && (
-                    <tr className="desk-column-groups">
-                      <th scope="colgroup" colSpan={6}>
-                        Results
-                      </th>
-                      <th scope="colgroup" colSpan={columns.length}>
-                        Submission criteria
-                      </th>
-                      <th scope="colgroup" colSpan={pitchCriteria.length}>
-                        Pitch criteria · jury average
-                      </th>
-                    </tr>
-                  )}
-                  <tr>
-                    <th scope="col">Project / team</th>
-                    {standings &&
-                      [
-                        'Place',
-                        'Submission /50',
-                        'Pitch /50',
-                        'Late deduction',
-                        'Overall /100',
-                      ].map((label) => (
-                        <th key={label} scope="col">
-                          {label}
-                        </th>
-                      ))}
-                    {showSubmission &&
-                      columns.map((c) => (
-                        <th key={key(c)} scope="col">
-                          {c.title} /{c.max}
-                        </th>
-                      ))}
-                    {showPitch &&
-                      pitchCriteria.map((c) => (
-                        <th key={c.id} scope="col">
-                          {c.label} /{c.max}
-                        </th>
-                      ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {projects.map((t) => (
-                    <tr key={t.id}>
-                      <th scope="row">
-                        <a href={'#project-' + t.id}>{t.title || t.name}</a>
-                        <small>
-                          {t.name}
-                          {t.focus && ' · ' + focusLabel(t.focus, t.own_topic)}
-                        </small>
-                      </th>
+            <table className="desk-comparison" aria-label={view}>
+              <thead>
+                <tr>
+                  <th scope="col">Project / team</th>
+                  {showSubmission && <th scope="col">Submission</th>}
+                  {showPitch && <th scope="col">Pitch · jury average</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {projects.map((t) => (
+                  <tr key={t.id}>
+                    <th scope="row">
+                      <a href={'#project-' + t.id}>{t.title || t.name}</a>
+                      <small>
+                        {t.name}
+                        {t.focus && ' · ' + focusLabel(t.focus, t.own_topic)}
+                      </small>
                       {standings && (
-                        <>
-                          <td>{t.place ?? (t.tie ? 'Tied' : '—')}</td>
-                          <td>
-                            {format(t.points)}
-                            {t.phase === 'review' && (
-                              <small>Needs review</small>
-                            )}
-                          </td>
-                          <td>
-                            {format(t.pitch)}
-                            <small>{t.ballots}/3 ballots</small>
-                          </td>
-                          <td>{t.late ? '−5' : '0'}</td>
-                          <td>
-                            <strong>
-                              {t.jury_review?.disqualified
-                                ? 'Disqualified'
-                                : format(t.overall)}
-                            </strong>
-                          </td>
-                        </>
+                        <p className="desk-result">
+                          {t.place != null && <small>Place {t.place}</small>}
+                          {t.tie && !t.decision && <small>Podium tie</small>}
+                          <strong>
+                            {t.jury_review?.disqualified
+                              ? 'Disqualified'
+                              : t.overall == null
+                                ? 'Overall pending'
+                                : format(t.overall) + '/100'}
+                          </strong>
+                          {t.late && <small>Late deduction −5</small>}
+                        </p>
                       )}
-                      {showSubmission &&
-                        columns.map((c) => {
-                          const applies = criteria(t).some(
-                            (x) => key(x) === key(c),
-                          );
-                          const exempt =
-                            c.id === 'S4' &&
-                            t.scorecard &&
-                            'efficiencyApplicable' in t.scorecard &&
-                            !t.scorecard.efficiencyApplicable;
-                          const adjusted = c.id === 'S1' && t.jury_review;
-                          const points = adjusted
-                            ? adjusted.correctness
-                            : t.scorecard?.rows.find((r) => r.id === c.id)
-                                ?.points;
-                          return (
-                            <td key={key(c)}>
-                              {!applies
-                                ? '—'
-                                : exempt
-                                  ? 'Exempt'
-                                  : format(points)}
-                              {applies && adjusted && (
-                                <small>Jury reviewed</small>
-                              )}
-                            </td>
-                          );
-                        })}
-                      {showPitch &&
-                        pitchCriteria.map((c) => (
-                          <td key={c.id}>
-                            {t.pitch_means
-                              ? format(t.pitch_means[c.id])
-                              : t.pitch != null
-                                ? 'Unavailable'
-                                : 'Pending'}
-                          </td>
-                        ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                    </th>
+                    {showSubmission && (
+                      <td>
+                        <strong className="desk-score">
+                          <span>Submission</span>{' '}
+                          {t.points == null
+                            ? 'Pending'
+                            : format(t.points) + '/50'}
+                        </strong>
+                        {t.phase === 'review' && <small>Needs review</small>}
+                        <dl>
+                          {criteria(t).map((c) => {
+                            const exempt =
+                              c.id === 'S4' &&
+                              t.scorecard &&
+                              'efficiencyApplicable' in t.scorecard &&
+                              !t.scorecard.efficiencyApplicable;
+                            const adjusted = c.id === 'S1' && t.jury_review;
+                            const points = adjusted
+                              ? adjusted.correctness
+                              : t.scorecard?.rows.find((r) => r.id === c.id)
+                                  ?.points;
+                            return (
+                              <div key={c.id}>
+                                <dt>
+                                  {c.title}
+                                  {adjusted && <small>Jury reviewed</small>}
+                                </dt>
+                                <dd>
+                                  {exempt
+                                    ? 'Exempt'
+                                    : points == null
+                                      ? 'Pending'
+                                      : format(points) + '/' + c.max}
+                                </dd>
+                              </div>
+                            );
+                          })}
+                        </dl>
+                      </td>
+                    )}
+                    {showPitch && (
+                      <td>
+                        <strong className="desk-score">
+                          <span>Pitch</span>{' '}
+                          {t.pitch == null
+                            ? 'Pending'
+                            : format(t.pitch) + '/50'}
+                        </strong>
+                        <small>{t.ballots}/3 ballots</small>
+                        {t.pitch_means ? (
+                          <dl>
+                            {pitchCriteria.map((c) => (
+                              <div key={c.id}>
+                                <dt>{c.label}</dt>
+                                <dd>
+                                  {format(t.pitch_means![c.id])}/{c.max}
+                                </dd>
+                              </div>
+                            ))}
+                          </dl>
+                        ) : (
+                          t.pitch != null && (
+                            <small>Criterion scores unavailable</small>
+                          )
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
             {view === 'Pitch criteria' && (
               <p className="desk-note">
                 Each criterion shows the average once all three jurors have

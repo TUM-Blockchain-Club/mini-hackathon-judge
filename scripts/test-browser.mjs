@@ -405,14 +405,21 @@ try {
   const comparison = desk.getByRole('table');
   const leader = comparison.getByRole('row').filter({ hasText: 'Exchange fee replay' });
   await leader.waitFor();
-  assert.deepEqual(await leader.getByRole('cell').allTextContents(), [
-    '1', '47.5', '443/3 ballots', '0', '91.5', '20', '10', '15', '2.5', '14', '13', '9', '8',
-  ]);
-  await comparison.getByText('68.5', { exact: true }).waitFor();
+  await leader.getByText('91.5/100', { exact: true }).waitFor();
+  assert.deepEqual(await leader.locator('dd').allTextContents(), ['20/20','10/10','15/15','2.5/5','14/15','13/15','9/10','8/10']);
+  for (const width of [320, 375, 768, 1440]) {
+    await desk.setViewportSize({ width, height: 900 });
+    assert.ok(await comparison.evaluate((table) => {
+      const bounds = table.getBoundingClientRect();
+      return bounds.left >= 0 && bounds.right <= innerWidth &&
+        [...table.querySelectorAll('tbody th, tbody td')].every((cell) => cell.scrollWidth <= cell.clientWidth + 1);
+    }));
+  }
+  await comparison.getByText('68.5/100', { exact: true }).waitFor();
   await desk.getByRole('button', { name: 'Submission criteria' }).click();
-  await comparison.getByRole('columnheader', { name: 'Correctness /20' }).waitFor();
+  await leader.getByText('Correctness', { exact: true }).waitFor();
   await desk.getByRole('button', { name: 'Pitch criteria' }).click();
-  await comparison.getByRole('columnheader', { name: 'Clarity and timing /10' }).waitFor();
+  await leader.getByText('Clarity and timing', { exact: true }).waitFor();
   await desk.getByRole('link', { name: 'Back to live desk' }).click();
   assert.equal(await desk.getByText('Exchange fee replay').count(), 0);
   await desk.getByRole('heading', { name: 'Organizer desk' }).waitFor();
@@ -765,11 +772,11 @@ try {
   await desk.getByRole('button', { name: 'Pitch criteria' }).click();
   const pitchTable = desk.getByRole('table', { name: 'Pitch criteria' });
   const pitchRow = pitchTable.getByRole('row').filter({ hasText: 'Invite fixture' });
-  assert.deepEqual(await pitchRow.getByRole('cell').allTextContents(), ['15', '10', '9', '9']);
+  assert.deepEqual(await pitchRow.locator('dd').allTextContents(), ['15/15', '10/15', '9/10', '9/10']);
   await desk.getByRole('button', { name: 'Submission criteria' }).click();
   const criteriaTable = desk.getByRole('table', { name: 'Submission criteria' });
   const criteriaRow = criteriaTable.getByRole('row').filter({ hasText: 'Invite fixture' });
-  assert.deepEqual(await criteriaRow.getByRole('cell').allTextContents(), ['10', '5', '7.5', '2.5']);
+  assert.deepEqual(await criteriaRow.locator('dd').allTextContents(), ['10/20', '5/10', '7.5/15', '2.5/5']);
   await desk.setViewportSize({ width: 375, height: 812 });
   assert.equal(await desk.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
   await criteriaRow.getByRole('link').click();

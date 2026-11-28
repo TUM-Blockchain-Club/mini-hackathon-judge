@@ -35,7 +35,7 @@
   border-color: var(--edge);
 }
 .judging-desk .text-link,
-.desk-scroll a {
+.desk-comparison a {
   color: var(--brand);
 }
 .judging-desk :focus-visible {
@@ -100,43 +100,84 @@
   border-color: var(--brand);
   font-weight: 700;
 }
-.desk-scroll {
-  overflow-x: auto;
-}
-.desk-scroll table {
-  border-collapse: collapse;
+.desk-comparison {
   width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
   font-size: 14px;
-}
-.desk-scroll :is(th, td) {
-  text-align: left;
-  padding: 12px 10px;
-  border-bottom: 1px solid var(--edge);
-  min-width: 90px;
   font-variant-numeric: tabular-nums;
 }
-.desk-scroll thead th {
-  background: var(--bg);
+.desk-comparison :is(th, td) {
+  text-align: left;
+  vertical-align: top;
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--edge);
+}
+.desk-comparison thead {
   color: var(--soft);
-  font-size: 12px;
-  vertical-align: bottom;
+  background: var(--bg);
 }
-.desk-scroll tr:not(.desk-column-groups) > th:first-child {
-  position: sticky;
-  left: 0;
-  background: var(--surface);
-  z-index: 1;
-  min-width: 175px;
+.desk-comparison thead th:first-child {
+  width: 24%;
 }
-.desk-scroll .desk-column-groups th {
-  color: var(--brand);
-  border-inline-start: 1px solid var(--edge);
-}
-.desk-scroll small {
+.desk-comparison small {
   display: block;
-  margin-top: 3px;
-  font-size: 11px;
   font-weight: 500;
+  font-size: 12px;
+}
+.desk-comparison dl {
+  margin: 12px 0 0;
+}
+.desk-comparison dl div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-top: 5px;
+}
+.desk-comparison dt {
+  color: var(--soft);
+  font-size: 13px;
+}
+.desk-comparison dd {
+  margin: 0;
+  font-weight: 650;
+}
+.desk-result strong {
+  color: var(--text);
+  font-size: 20px;
+}
+.desk-score span {
+  display: none;
+}
+@media (max-width: 760px) {
+  .desk-comparison,
+  .desk-comparison tbody {
+    display: block;
+  }
+  .desk-comparison thead {
+    position: absolute;
+    clip-path: inset(50%);
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+  .desk-comparison tbody tr {
+    display: grid;
+    gap: 14px;
+    border-top: 1px solid var(--edge);
+    padding-block: 16px;
+  }
+  .desk-comparison tbody :is(th, td) {
+    padding: 0;
+    border: 0;
+    min-width: 0;
+  }
+  .desk-comparison .desk-score span {
+    display: inline;
+  }
+  .desk-comparison .desk-result {
+    margin: 6px 0 0;
+  }
 }
 .desk-note,
 .desk-awaiting {
