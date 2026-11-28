@@ -60,11 +60,7 @@ export function ParticipantBoard({
           <span>
             Submission <ArrowRight aria-hidden="true" />
           </span>
-          <small>
-            {receipt
-              ? 'View receipt · ' + receipt.title
-              : 'Submit the link to your public GitHub repository.'}
-          </small>
+          {receipt && <small>View receipt · {receipt.title}</small>}
         </Link>
         <Link href="/resources">
           <span>
