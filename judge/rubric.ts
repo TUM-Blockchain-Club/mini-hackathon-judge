@@ -37,7 +37,7 @@ export const rubricSchema = z
 export type Rubric = z.infer<typeof rubricSchema>;
 export type Criterion = z.infer<typeof criterion>;
 export const draftRubric: Rubric = {
-  version: 'rehearsal-1',
+  version: 'rehearsal-2',
   common: [
     {
       id: 'evidence',
@@ -51,14 +51,14 @@ export const draftRubric: Rubric = {
       title: 'Reproducibility',
       max: 10,
       guidance:
-        'Award 5 points for executable instructions or worked steps and 5 for a documented independent reproduction.',
+        'Award 5 points for traceable inputs and 5 for a result the judge can independently verify from the submitted artifacts.',
     },
     {
-      id: 'weights',
-      title: 'Scoring weights',
+      id: 'usefulness',
+      title: 'Usefulness',
       max: 10,
       guidance:
-        'Award 5 points for a beginner-focused rationale and 5 for a reconciled 100-point matrix or the wallet focus’s proposed criteria weights.',
+        'Award 5 points for a clear benefit to the intended reader and 5 for a deliverable that addresses that need.',
     },
   ],
   focuses: Object.fromEntries(
