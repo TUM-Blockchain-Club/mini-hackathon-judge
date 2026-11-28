@@ -158,8 +158,25 @@ try {
     await p.getByRole('main').getByRole('link').evaluateAll((links) =>
       links.map((link) => link.getAttribute('href')),
     ),
-    ['/docs/participant-materials.zip', '/docs/student-ai-tools.pdf'],
+    [
+      'https://github.com/andi-lightup/lightup-tbc-hackathon',
+      ...['tracks', 'matrices', 'templates', 'data/taxtool-sample'].map(
+        (path) => `https://github.com/andi-lightup/lightup-tbc-hackathon/tree/main/${path}`,
+      ),
+      '/docs/participant-materials.zip',
+      '/docs/student-ai-tools.pdf',
+      'https://lightupkryptos.de/so-testen-wir/',
+      'https://youtu.be/Py4EBRDl4zU',
+      'https://youtu.be/amlvSdwGT98',
+      'https://youtu.be/Vs46Y9VhqGM',
+    ],
   );
+  const guide = await p.request.get(origin + '/docs/student-ai-tools.pdf');
+  assert.equal(guide.status(), 200);
+  assert.match(guide.headers()['content-type'], /^application\/pdf\b/);
+  const guideBytes = await guide.body();
+  assert.equal(guideBytes.subarray(0, 5).toString(), '%PDF-');
+  assert.ok(guideBytes.subarray(-32).includes('%%EOF'));
   assert.equal(
     await p.getByRole('textbox', { name: 'Project name' }).count(),
     0,
