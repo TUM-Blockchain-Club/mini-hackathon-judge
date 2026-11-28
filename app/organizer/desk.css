@@ -121,8 +121,16 @@
   font-size: 12px;
   vertical-align: bottom;
 }
-.desk-scroll th:first-child {
+.desk-scroll tr:not(.desk-column-groups) > th:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  z-index: 1;
   min-width: 175px;
+}
+.desk-scroll .desk-column-groups th {
+  color: var(--brand);
+  border-inline-start: 1px solid var(--edge);
 }
 .desk-scroll small {
   display: block;

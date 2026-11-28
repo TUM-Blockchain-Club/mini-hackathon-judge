@@ -12,6 +12,9 @@ const format = (n: number | null | undefined) =>
 
 export function ProjectOverview({ data }: { data: Desk }) {
   const [view, setView] = useState<(typeof views)[number]>('Standings');
+  const standings = view === 'Standings';
+  const showSubmission = view !== 'Pitch criteria';
+  const showPitch = view !== 'Submission criteria';
   const projects = data.teams.filter((t) => t.submission);
   const awaiting = data.teams.filter((t) => !t.submission);
   const metrics = [
@@ -89,32 +92,53 @@ export function ProjectOverview({ data }: { data: Desk }) {
               aria-label={view + ' comparison'}
             >
               <table aria-label={view}>
+                {standings && (
+                  <>
+                    <colgroup span={6} />
+                    <colgroup span={columns.length} />
+                    <colgroup span={pitchCriteria.length} />
+                  </>
+                )}
                 <thead>
+                  {standings && (
+                    <tr className="desk-column-groups">
+                      <th scope="colgroup" colSpan={6}>
+                        Results
+                      </th>
+                      <th scope="colgroup" colSpan={columns.length}>
+                        Submission criteria
+                      </th>
+                      <th scope="colgroup" colSpan={pitchCriteria.length}>
+                        Pitch criteria · jury average
+                      </th>
+                    </tr>
+                  )}
                   <tr>
                     <th scope="col">Project / team</th>
-                    {view === 'Standings'
-                      ? [
-                          'Place',
-                          'Submission /50',
-                          'Pitch /50',
-                          'Late deduction',
-                          'Overall /100',
-                        ].map((label) => (
-                          <th key={label} scope="col">
-                            {label}
-                          </th>
-                        ))
-                      : view === 'Pitch criteria'
-                        ? pitchCriteria.map((c) => (
-                            <th key={c.id} scope="col">
-                              {c.label} /{c.max}
-                            </th>
-                          ))
-                        : columns.map((c) => (
-                            <th key={key(c)} scope="col">
-                              {c.title} /{c.max}
-                            </th>
-                          ))}
+                    {standings &&
+                      [
+                        'Place',
+                        'Submission /50',
+                        'Pitch /50',
+                        'Late deduction',
+                        'Overall /100',
+                      ].map((label) => (
+                        <th key={label} scope="col">
+                          {label}
+                        </th>
+                      ))}
+                    {showSubmission &&
+                      columns.map((c) => (
+                        <th key={key(c)} scope="col">
+                          {c.title} /{c.max}
+                        </th>
+                      ))}
+                    {showPitch &&
+                      pitchCriteria.map((c) => (
+                        <th key={c.id} scope="col">
+                          {c.label} /{c.max}
+                        </th>
+                      ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -127,7 +151,7 @@ export function ProjectOverview({ data }: { data: Desk }) {
                           {t.focus && ' · ' + focusLabel(t.focus, t.own_topic)}
                         </small>
                       </th>
-                      {view === 'Standings' ? (
+                      {standings && (
                         <>
                           <td>{t.place ?? (t.tie ? 'Tied' : '—')}</td>
                           <td>
@@ -149,17 +173,8 @@ export function ProjectOverview({ data }: { data: Desk }) {
                             </strong>
                           </td>
                         </>
-                      ) : view === 'Pitch criteria' ? (
-                        pitchCriteria.map((c) => (
-                          <td key={c.id}>
-                            {t.pitch_means
-                              ? format(t.pitch_means[c.id])
-                              : t.pitch != null
-                                ? 'Unavailable'
-                                : 'Pending'}
-                          </td>
-                        ))
-                      ) : (
+                      )}
+                      {showSubmission &&
                         columns.map((c) => {
                           const applies = criteria(t).some(
                             (x) => key(x) === key(c),
@@ -186,8 +201,17 @@ export function ProjectOverview({ data }: { data: Desk }) {
                               )}
                             </td>
                           );
-                        })
-                      )}
+                        })}
+                      {showPitch &&
+                        pitchCriteria.map((c) => (
+                          <td key={c.id}>
+                            {t.pitch_means
+                              ? format(t.pitch_means[c.id])
+                              : t.pitch != null
+                                ? 'Unavailable'
+                                : 'Pending'}
+                          </td>
+                        ))}
                     </tr>
                   ))}
                 </tbody>

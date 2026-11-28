@@ -403,7 +403,11 @@ try {
   await desk.getByRole('link', { name: 'Preview mock results' }).click();
   await desk.getByRole('heading', { name: 'Mock judging results' }).waitFor();
   const comparison = desk.getByRole('table');
-  await comparison.getByText('91.5', { exact: true }).waitFor();
+  const leader = comparison.getByRole('row').filter({ hasText: 'Exchange fee replay' });
+  await leader.waitFor();
+  assert.deepEqual(await leader.getByRole('cell').allTextContents(), [
+    '1', '47.5', '443/3 ballots', '0', '91.5', '20', '10', '15', '2.5', '14', '13', '9', '8',
+  ]);
   await comparison.getByText('68.5', { exact: true }).waitFor();
   await desk.getByRole('button', { name: 'Submission criteria' }).click();
   await comparison.getByRole('columnheader', { name: 'Correctness /20' }).waitFor();
