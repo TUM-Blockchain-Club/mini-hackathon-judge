@@ -4,32 +4,22 @@ const lightUpRepo = 'https://github.com/andi-lightup/lightup-tbc-hackathon';
 
 const sections = [
   {
-    title: 'Hackathon materials',
-    links: [
-      { label: 'LIGHT UP hackathon brief (GitHub)', href: lightUpRepo },
-      { label: 'Track briefs', href: `${lightUpRepo}/tree/main/tracks` },
-      { label: 'Rating matrices', href: `${lightUpRepo}/tree/main/matrices` },
-      {
-        label: 'Submission template, hands-on test log and pitch criteria',
-        href: `${lightUpRepo}/tree/main/templates`,
-      },
-      {
-        label: 'Tax tool sample dataset',
-        href: `${lightUpRepo}/tree/main/data/taxtool-sample`,
-      },
-    ],
-  },
-  {
-    title: 'Downloads',
+    title: 'Event downloads',
     links: [
       {
-        label: 'Hackathon brief, tracks, rating matrices and templates (ZIP)',
+        label: 'Event brief, track guides, reference matrices and submission template (ZIP)',
         href: '/docs/participant-materials.zip',
       },
       {
         label: 'Student AI tools setup guide (PDF)',
         href: '/docs/student-ai-tools.pdf',
       },
+    ],
+  },
+  {
+    title: 'Optional background',
+    links: [
+      { label: 'Original LIGHT UP challenge and scoring exercises (GitHub)', href: lightUpRepo },
     ],
   },
   {

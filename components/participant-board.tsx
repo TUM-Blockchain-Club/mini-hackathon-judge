@@ -40,6 +40,7 @@ export function ParticipantBoard({
             Read the full LIGHT UP challenge on GitHub{' '}
             <ArrowUpRight size={20} aria-hidden="true" />
           </a>
+          <small>The original brief’s scoring exercises are optional. Use the submission checklist below for this event.</small>
         </section>
         <section className="reg-card board-deadline">
           <h2>
