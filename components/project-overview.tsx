@@ -106,7 +106,6 @@ export function ProjectOverview({ data }: { data: Desk }) {
                                 ? 'Overall pending'
                                 : format(t.overall) + '/100'}
                           </strong>
-                          {t.late && <small>Late deduction −5</small>}
                         </p>
                       )}
                     </th>

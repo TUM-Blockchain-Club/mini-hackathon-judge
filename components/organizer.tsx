@@ -14,7 +14,7 @@ import { ProjectOverview } from './project-overview';
 import { JuryScorecard } from './jury-scorecard';
 import type { desk } from '@/lib/store';
 import type { Admin } from '@/lib/auth';
-import { eventDate, focusLabel } from '@/lib/event';
+import { commitCutoff, eventDate, focusLabel } from '@/lib/event';
 async function post(action: string, body: unknown) {
   const res = await fetch('/api/organizer/' + action, {
     method: 'POST',
@@ -230,7 +230,7 @@ export function Organizer({
                   !submitted ||
                   (!data.started &&
                     !!data.deadline &&
-                    Date.parse(data.deadline) + 600000 >= Date.now())
+                    +commitCutoff(new Date(data.deadline)) >= Date.now())
                 }
                 onClick={() =>
                   act('judge', {}, (r) =>
@@ -288,9 +288,7 @@ export function Organizer({
                 />
               </label>
               <small>
-                The commit cutoff is five minutes after this deadline. Late entries
-                close ten minutes after it. Saving recalculates the five-point
-                deduction for accepted submissions.
+                The repository commit cutoff is five minutes after this deadline.
               </small>
               <button className="reg-secondary" disabled={!!busy || data.started}>
                 Save event settings
@@ -337,7 +335,6 @@ export function Organizer({
                 Pitch {t.pitch == null ? 'pending' : display(t.pitch) + '/50'} ·{' '}
                 {t.ballots}/3 ballots
               </span>
-              {t.late && <span>Late −5</span>}
               <strong>
                 Overall{' '}
                 {t.jury_review?.disqualified

@@ -25,7 +25,7 @@ export function Submission({
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
   const cutoff = commitDeadline ? eventDate(commitDeadline) : 'the commit cutoff';
-  const open = state === 'open' || state === 'late';
+  const open = state === 'open';
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!open || busy) return;
@@ -68,9 +68,6 @@ export function Submission({
         <p>
           Receipt ID <code>{receipt.id}</code>
         </p>
-        {receipt.late && (
-          <p>Late submission · 5 points deducted from the overall score.</p>
-        )}
         <details>
           <summary>Registration snapshot fingerprint (SHA-256)</summary>
           <code>{receipt.digest}</code>
@@ -195,9 +192,7 @@ export function Submission({
               ? 'Submissions have not opened yet.'
               : state === 'unavailable'
                 ? 'The submission service is unavailable.'
-                : state === 'late'
-                  ? 'Submitting now applies the 5-point late deduction.'
-                  : ''}
+                : ''}
         </small>
       </div>
     </form>

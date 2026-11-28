@@ -225,25 +225,37 @@ describe(
       assert.equal((await latest()).ownTopic, null);
     });
 
-    it('timestamps late receipts on the server and keeps the last accepted version after cutoff', async () => {
+    it('rejects revisions immediately after the deadline and preserves the on-time receipt', async () => {
       await expectStatus(
         teams.POST(post(roster('Deadline')), action('register')),
         201,
       );
       const onTime = await submissions.POST(project());
       assert.equal(onTime.status, 201);
-      assert.equal((await onTime.json()).late, false);
-      await db()`UPDATE event_settings SET deadline=now()-interval '5 minutes'`;
-      const inGrace = await submissions.POST(project());
-      assert.equal(inGrace.status, 201);
-      const receipt = await inGrace.json();
-      assert.equal(receipt.late, true);
-      await db()`UPDATE event_settings SET deadline=now()-interval '11 minutes'`;
+      const receipt = await onTime.json();
+      assert.equal(receipt.late, false);
+      await db()`UPDATE event_settings SET deadline=clock_timestamp()-interval '1 millisecond'`;
       await expectStatus(submissions.POST(project()), 409);
       const rows =
         await db()`SELECT id FROM submissions ORDER BY submitted_at DESC`;
-      assert.equal(rows.length, 2);
+      assert.equal(rows.length, 1);
       assert.equal(rows[0].id, receipt.id);
+    });
+
+    it('rejects a first submission that reaches storage after the cutoff during repository capture', async () => {
+      await expectStatus(teams.POST(post(roster('Capture_Cutoff')), action('register')), 201);
+      const archive = await readFile(new URL('./fixtures/github-head.zip', import.meta.url));
+      const capture = mock.method(globalThis, 'fetch', async () => {
+        await db()`UPDATE event_settings SET deadline=clock_timestamp()`;
+        return new Response(new Uint8Array(archive));
+      });
+      try {
+        await expectStatus(submissions.POST(project()), 409);
+        assert.equal(capture.mock.callCount(), 1);
+        assert.equal((await db()`SELECT id FROM submissions`).length, 0);
+      } finally {
+        capture.mock.restore();
+      }
     });
 
     it('counts one valid pitch ballot per assigned judge and team', async () => {

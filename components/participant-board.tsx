@@ -12,13 +12,11 @@ const questions = {
 export function ParticipantBoard({
   deadline,
   commitDeadline,
-  closes,
   state,
   receipt,
 }: {
   deadline?: string;
   commitDeadline?: string;
-  closes?: string;
   state: string;
   receipt: SubmissionReceipt | null;
 }) {
@@ -54,18 +52,7 @@ export function ParticipantBoard({
               <strong>Push your final work and pitch deck to the default branch by {eventDate(commitDeadline)}.</strong>
             </p>
           )}
-          {closes && (
-            <p>
-              <strong>Late submissions close at {eventDate(closes)} and cost 5 points.</strong>
-            </p>
-          )}
-          {(state === 'closed' || state === 'late') && (
-            <b>
-              {state === 'closed'
-                ? 'Submissions closed'
-                : 'Late submission window'}
-            </b>
-          )}
+          {state === 'closed' && <b>Submissions closed</b>}
         </section>
       </div>
       <nav className="board-destinations" aria-label="Team workspace">

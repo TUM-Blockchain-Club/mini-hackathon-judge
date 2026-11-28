@@ -65,6 +65,13 @@ CREATE TABLE IF NOT EXISTS pitch_ballots (
 ALTER TABLE event_settings ADD COLUMN IF NOT EXISTS guide text;
 ALTER TABLE judge_runs ALTER COLUMN points TYPE double precision;
 ALTER TABLE submissions ADD COLUMN IF NOT EXISTS late boolean NOT NULL DEFAULT false;
+-- Block grace-period writes from earlier deployments while retaining existing receipts.
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint
+                 WHERE conrelid='submissions'::regclass AND conname='submissions_on_time') THEN
+    ALTER TABLE submissions ADD CONSTRAINT submissions_on_time CHECK (NOT late) NOT VALID;
+  END IF;
+END $$;
 ALTER TABLE judge_runs ADD COLUMN IF NOT EXISTS jury_review jsonb;
 -- Existing cutoffs, frozen batches and legacy pitch totals are preserved.
 UPDATE event_settings SET deadline='2026-11-28 17:00:00+01' WHERE deadline IS NULL AND started_at IS NULL;

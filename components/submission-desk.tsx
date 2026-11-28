@@ -9,10 +9,9 @@ import { Submission } from './submission';
 import type { SubmissionReceipt } from '@/lib/types';
 
 type Desk = {
-  state: 'open' | 'late' | 'closed' | 'pending' | 'unavailable';
+  state: 'open' | 'closed' | 'pending' | 'unavailable';
   deadline?: string;
   commitDeadline?: string;
-  closes?: string;
   team: { id: string; name: string } | null;
   receipt: SubmissionReceipt | null;
 };
@@ -63,12 +62,7 @@ export function SubmissionDesk({ board }: { board: boolean }) {
     };
   }, [refresh]);
   useEffect(() => {
-    const next =
-      desk?.state === 'open'
-        ? desk.deadline
-        : desk?.state === 'late'
-          ? desk.closes
-          : undefined;
+    const next = desk?.state === 'open' ? desk.deadline : undefined;
     if (!next) return;
     const ms = Math.min(
       2_147_000_000,
@@ -178,7 +172,6 @@ export function SubmissionDesk({ board }: { board: boolean }) {
         <ParticipantBoard
           deadline={desk.deadline}
           commitDeadline={desk.commitDeadline}
-          closes={desk.closes}
           state={desk.state}
           receipt={desk.receipt}
         />

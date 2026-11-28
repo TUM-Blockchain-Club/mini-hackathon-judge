@@ -450,7 +450,7 @@ try {
         [...table.querySelectorAll('tbody th, tbody td')].every((cell) => cell.scrollWidth <= cell.clientWidth + 1);
     }));
   }
-  await comparison.getByText('68.5/100', { exact: true }).waitFor();
+  await comparison.getByText('73.5/100', { exact: true }).waitFor();
   await desk.getByRole('button', { name: 'Submission criteria' }).click();
   await leader.getByText('Correctness', { exact: true }).waitFor();
   await desk.getByRole('button', { name: 'Pitch criteria' }).click();
@@ -692,18 +692,8 @@ try {
   await p.getByText('Project received.').waitFor();
   await p.getByText('Invite fixture ·', { exact: false }).waitFor();
   assert.equal(new URL(p.url()).pathname, '/submit');
-  // Advance only this isolated event through its late window.
-  await isolated`UPDATE event_settings SET deadline=clock_timestamp()-interval '4 minutes'`;
-  const lateState = await (
-    await p.request.get(origin + '/api/submissions')
-  ).json();
-  assert.equal(lateState.state, 'late');
-  const lateResponse = await p.request.post(origin + '/api/submissions', {
-    multipart: upload,
-  });
-  assert.equal(lateResponse.status(), 201);
-  assert.equal((await lateResponse.json()).late, true);
-  await isolated`UPDATE event_settings SET deadline=clock_timestamp()-interval '11 minutes'`;
+  // Move the deadline just behind the database clock, then attempt a revision.
+  await isolated`UPDATE event_settings SET deadline=clock_timestamp()-interval '1 millisecond'`;
   assert.equal(
     (
       await p.request.post(origin + '/api/submissions', { multipart: upload })
@@ -781,7 +771,7 @@ try {
     has: desk.getByRole('heading', { name: 'Invite fixture', exact: true }),
   });
   await invitedRow.getByText('Place 1', { exact: true }).waitFor();
-  await invitedRow.getByText('Overall 63%').waitFor();
+  await invitedRow.getByText('Overall 68%').waitFor();
   await desk.getByRole('button', { name: 'Pitch criteria' }).click();
   const pitchTable = desk.getByRole('table', { name: 'Pitch criteria' });
   const pitchRow = pitchTable.getByRole('row').filter({ hasText: 'Invite fixture' });
@@ -797,7 +787,6 @@ try {
   await desk.setViewportSize({ width: 1440, height: 1000 });
   // Equalize the pitch and submission components to trigger an unresolved tie.
   await isolated`UPDATE pitch_ballots SET p1=10 WHERE team_id=${inviteTeam.id}`;
-  await isolated`UPDATE judge_runs SET points=30 WHERE submission_id IN (SELECT id FROM submissions WHERE team_id=${inviteTeam.id})`;
   await desk.reload();
   await invitedRow.getByText('Podium tie · jury decision needed').waitFor();
   const tieForm = desk.locator('details').filter({

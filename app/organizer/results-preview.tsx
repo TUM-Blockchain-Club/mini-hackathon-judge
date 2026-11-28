@@ -15,7 +15,6 @@ type Sample = {
   scores: [number, number, number, number];
   reasons: [string, string, string, string];
   pitch: NonNullable<TeamRow['pitch_means']> | null;
-  late?: boolean;
 };
 
 const samples: Sample[] = [
@@ -38,7 +37,6 @@ const samples: Sample[] = [
     focus: 'wallet-B',
     scores: [10, 10, 7.5, 5],
     pitch: { p1: 12, p2: 13, p3: 7, p4: 9 },
-    late: true,
     reasons: [
       'Two recovery flows reproduced. The third lacked a verification step.',
       'A first-time user can follow the checklist for each wallet.',
@@ -86,7 +84,7 @@ function previewTeam(sample: Sample): TeamRow {
     pitch_sum: sample.pitch
       ? Object.values(sample.pitch).reduce((sum, n) => sum + n, 0) * 3
       : 0,
-    late: !!sample.late,
+    late: false,
     my_ballot: null,
     legacy_pitch: null,
     jury_review: null,

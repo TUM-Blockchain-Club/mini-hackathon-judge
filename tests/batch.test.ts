@@ -52,6 +52,11 @@ test(
       );
       await assert.rejects(addTeam('team_0'), /already exists/);
       await assert.rejects(addTeam('Team name'), /underscores/);
+      await assert.rejects(
+        sql`INSERT INTO submissions(team_id,title,focus,source,filename,content,digest,late)
+          VALUES(${teams[0].id},'Legacy write','wallet-A','upload','result.md','abc','abc',true)`,
+        /submissions_on_time/,
+      );
       await Promise.all(
         teams.map((t, i) => saveSubmission(t.id, 'Original', 'wallet-A', i === 0
           ? { ...data, source: 'https://github.com/example/original/commit/' + '0'.repeat(40) }
@@ -66,12 +71,14 @@ test(
       await assert.rejects(freezeBatch());
       await new Promise((resolve) => setTimeout(resolve, 5));
       await db()`UPDATE submissions SET submitted_at=submitted_at-interval '12 minutes'`;
-      const deadline = new Date(Date.now() - 601000);
+      const deadline = new Date(Date.now() - 301000);
       const cutoff = new Date(+deadline + 300_000).toISOString();
-      // The latest revision was late under the earlier deadline and on time after extension.
-      const earlier = new Date(+deadline - 180000);
-      await configure(earlier.toISOString());
-      assert.equal((await latestReceipt(teams[0].id))?.late, true);
+      // A deadline edit cannot invalidate an accepted revision.
+      const earlier = new Date(+deadline - 8 * 60_000);
+      await assert.rejects(configure(earlier.toISOString()), /exclude an accepted receipt/);
+      await configure(new Date(Date.now() - 60_000).toISOString());
+      await assert.rejects(freezeBatch(), /commit cutoff/);
+      await assert.rejects(saveSubmission(teams[0].id, 'Revision', 'wallet-A', data), /deadline/);
       await configure(deadline.toISOString());
       assert.equal((await latestReceipt(teams[0].id))?.late, false);
       assert.equal((await publicEvent()).commitDeadline, cutoff);

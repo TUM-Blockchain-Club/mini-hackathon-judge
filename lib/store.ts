@@ -17,18 +17,15 @@ import { rubricSchema, type Rubric } from '../judge/rubric';
 export async function publicEvent() {
   try {
     const [e] =
-      await db()`SELECT deadline, deadline + interval '10 minutes' AS closes, started_at, clock_timestamp() AS stamp FROM event_settings WHERE singleton`;
+      await db()`SELECT deadline, started_at, clock_timestamp() > deadline AS expired FROM event_settings WHERE singleton`;
     return {
       deadline: e.deadline?.toISOString() as string | undefined,
       commitDeadline: e.deadline ? commitCutoff(e.deadline).toISOString() : undefined,
-      closes: e.closes?.toISOString() as string | undefined,
       state: !e.deadline
         ? 'pending'
-        : e.started_at || e.closes < e.stamp
+        : e.started_at || e.expired
           ? 'closed'
-          : e.stamp > e.deadline
-            ? 'late'
-            : 'open',
+          : 'open',
     } as const;
   } catch {
     return { deadline: undefined, state: 'unavailable' } as const;
@@ -65,9 +62,9 @@ export async function saveSubmission(
       throw new InputError('Submissions are closed.', 409);
     const [s] =
       await tx`WITH stamp AS MATERIALIZED (SELECT clock_timestamp() AS accepted_at)
-      INSERT INTO submissions(team_id,title,description,focus,own_topic,source,filename,content,digest,submitted_at,late)
-      SELECT ${team},${title.trim()},${description},${focus},${ownTopic},${data.source},${data.filename},${data.bytes},${data.hash},accepted_at,accepted_at > ${e.deadline} FROM stamp
-      WHERE accepted_at <= ${e.deadline}::timestamptz + interval '10 minutes' RETURNING id,submitted_at,digest,late`;
+      INSERT INTO submissions(team_id,title,description,focus,own_topic,source,filename,content,digest,submitted_at)
+      SELECT ${team},${title.trim()},${description},${focus},${ownTopic},${data.source},${data.filename},${data.bytes},${data.hash},accepted_at FROM stamp, event_settings
+      WHERE singleton AND accepted_at <= deadline RETURNING id,submitted_at,digest,late`;
     if (!s) throw new InputError('The deadline has passed.', 409);
     return {
       id: s.id,
@@ -115,14 +112,13 @@ export async function configure(deadline: string, raw?: unknown) {
     if (event.started_at)
       throw new InputError('Settings are locked for this batch.', 409);
     const later =
-      await tx`SELECT id FROM submissions WHERE submitted_at > ${date}::timestamptz + interval '10 minutes' LIMIT 1`;
+      await tx`SELECT id FROM submissions WHERE submitted_at > ${date}::timestamptz LIMIT 1`;
     if (later.length)
       throw new InputError(
         'The final cutoff would exclude an accepted receipt.',
         409,
       );
-    await tx`UPDATE submissions SET late=(submitted_at > ${date})
-      WHERE late IS DISTINCT FROM (submitted_at > ${date})`;
+    await tx`UPDATE submissions SET late=false WHERE late`;
     if (parsed)
       await tx`UPDATE event_settings SET deadline=${date},rubric=${tx.json(parsed.data)} WHERE singleton`;
     else
@@ -163,9 +159,9 @@ export async function freezeBatch(
         409,
       );
     if (!e.started_at) {
-      if (!e.deadline || +e.stamp <= +e.deadline + 600_000)
+      if (!e.deadline || +e.stamp <= +commitCutoff(e.deadline))
         throw new InputError(
-          'Judging opens after the late submission window.',
+          'Judging opens after the repository commit cutoff.',
           409,
         );
       if (!model || !snapshot || !process.env.GEMINI_API_KEY?.trim())
@@ -193,7 +189,7 @@ export async function freezeBatch(
           409,
         );
       const subs =
-        await tx`SELECT DISTINCT ON(team_id) id,focus,source FROM submissions WHERE submitted_at <= ${e.deadline}::timestamptz + interval '10 minutes' ORDER BY team_id,submitted_at DESC,id DESC`;
+        await tx`SELECT DISTINCT ON(team_id) id,focus,source FROM submissions WHERE submitted_at <= ${e.deadline}::timestamptz OR late ORDER BY team_id,submitted_at DESC,id DESC`;
       if (!subs.length)
         throw new InputError('No submissions are available to judge.', 409);
       const cutoff = commitCutoff(e.deadline);
@@ -215,7 +211,7 @@ export async function freezeBatch(
           const rules = official ? officialRubric.common : [...rubric.common, ...(rubric.focuses[s.focus] ?? [])];
           const guide = official ? trackGuide(e.guide, s.focus) : undefined;
           if (guide) {
-            guide.instructions += `\nEvent timing for this batch overrides any example times above. Submission deadline: ${e.deadline.toISOString()}. Default-branch commit cutoff (inclusive): ${cutoff.toISOString()}. The server selected the eligible project and applies any late deduction to the overall result. Do not deduct lateness from rubric points.`;
+            guide.instructions += `\nEvent timing for this batch overrides any example times above. Submission deadline: ${e.deadline.toISOString()}. Default-branch commit cutoff (inclusive): ${cutoff.toISOString()}. The server enforces submission eligibility. Score the project on rubric criteria only.`;
           }
           await tx`INSERT INTO judge_runs(submission_id,until_at,rubric,model,snapshot,phase,issue,archive_source,archive_digest,archive_content)
             VALUES(${s.id},${e.stamp},${tx.json({ version: rubric.version, criteria: rules, ...(guide ? { guide } : {}) })},${model!},${snapshot!},

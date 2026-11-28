@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     if (Number(request.headers.get('content-length')) > 16 * 1024)
       throw new InputError('Submission form is too large.', 413);
     const event = await publicEvent();
-    if (event.state !== 'open' && event.state !== 'late')
+    if (event.state !== 'open')
       throw new InputError('The submission window is closed.', 409);
     await throttle(request, 'submit', 100);
     const data = await request.formData();
