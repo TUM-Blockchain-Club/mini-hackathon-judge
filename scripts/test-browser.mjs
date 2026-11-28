@@ -437,7 +437,7 @@ try {
   if (
     !(await desk.getByLabel('Deadline in your browser’s time zone').isVisible())
   )
-    await desk.getByText('Deadline and evaluation rubric').click();
+    await desk.getByText('Submission deadline', { exact: true }).click();
   await desk
     .getByLabel('Deadline in your browser’s time zone')
     .fill(
@@ -496,25 +496,15 @@ try {
   await p.getByRole('button', { name: 'Submit project' }).click();
   await p.getByText('Project received.').waitFor();
   const voterPassword = 'ballot-fixture-password';
-  const guidePath =
-    process.env.TEST_JUDGING_GUIDE_FILE ||
-    new URL('../tests/fixtures/jury-guide.md', import.meta.url);
-  const guideBytes = await readFile(guidePath);
   assert.equal(
     (await p.request.get(origin + '/api/organizer/guide')).status(),
     401,
   );
-  await desk.getByLabel('Confidential judging guide').setInputFiles({
-    name: 'guide.md',
-    mimeType: 'text/markdown',
-    buffer: guideBytes,
-  });
-  await desk.getByRole('button', { name: 'Import guide' }).click();
-  await desk.getByText('Private guide imported.').waitFor();
-  assert.equal(
-    await (await desk.request.get(origin + '/api/organizer/guide')).text(),
-    guideBytes.toString(),
-  );
+  assert.equal(await desk.getByRole('button', { name: 'Import guide' }).count(), 0);
+  assert.equal(await desk.locator('input[type=file]').count(), 0);
+  assert.equal((await desk.request.post(origin + '/api/organizer/guide', {
+    data: { guide: 'replacement' }
+  })).status(), 404);
   await desk.getByText('Admins and jury seats', { exact: true }).click();
   await desk.getByLabel('New admin name').fill('Event helper');
   await desk.getByLabel('Initial password').fill(voterPassword);
@@ -578,7 +568,7 @@ try {
           : 'Pitch pending · ' + seat + '/3 ballots',
       )
       .waitFor();
-    assert.equal((await j.request.get(origin + api + 'guide')).status(), 200);
+    assert.equal((await j.request.get(origin + api + 'guide')).status(), 404);
     assert.equal(
       (await j.request.post(origin + api + 'settings', { data: {} })).status(),
       403,
@@ -723,11 +713,10 @@ try {
     );
 
   // Rehearse a jury observation and an equal-score podium using saved ballots.
-  const [event] =
-    await isolated`SELECT rubric FROM event_settings WHERE singleton`;
+  const { officialRubric } = require('tsx/cjs/api').require('../judge/official.ts', import.meta.url);
   const rubric = {
-    version: event.rubric.version,
-    criteria: event.rubric.common,
+    version: officialRubric.version,
+    criteria: officialRubric.common,
   };
   const ev = [{ ref: 'I01-1', location: 'proof.txt line 1' }];
   const scorecard = {
@@ -758,6 +747,9 @@ try {
     await isolated`INSERT INTO judge_runs(submission_id,phase,until_at,rubric,model,snapshot,scorecard,points)
       VALUES(${sub.id},'complete',now(),${isolated.json(rubric)},'fixture','fixture',${isolated.json(scorecard)},25)`;
   }
+  const frozenGuide = await readFile(new URL('../tests/fixtures/jury-guide.md', import.meta.url), 'utf8');
+  await isolated`UPDATE event_settings SET guide=${frozenGuide}, started_at=now() WHERE singleton`;
+  assert.equal(await (await desk.request.get(origin + api + 'guide')).text(), frozenGuide);
   await isolated`INSERT INTO pitch_ballots(team_id,admin_id,p1,p2,p3,p4)
     SELECT ${inviteTeam.id},admin_id,15,10,9,9 FROM pitch_ballots WHERE team_id=${me.id}`;
   await desk.reload();

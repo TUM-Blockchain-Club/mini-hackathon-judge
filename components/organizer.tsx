@@ -165,17 +165,6 @@ export function Organizer({
       () => setNotice('Pitch score saved.'),
     );
   }
-  async function guide(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const file = new FormData(e.currentTarget).get('file');
-    if (!(file instanceof File) || file.size > 180000) {
-      setError('Choose a Markdown guide under 180 KB.');
-      return;
-    }
-    await act('guide', { guide: await file.text() }, () =>
-      setNotice('Private guide imported.'),
-    );
-  }
   const display = (n: number) =>
     n.toLocaleString('en-GB', { maximumFractionDigits: 2 });
   const submitted = data.teams.filter((t) => t.submission).length;
@@ -224,13 +213,14 @@ export function Organizer({
         {admin.owner && (
           <section className="reg-card">
             <h2>Judging batch</h2>
+            <p>Judging uses Andi’s approved internal guide and the event scoring rules.</p>
             <p>
               {submitted} submitted · {data.teams.length} registered
             </p>
             <p className="subtle">
               {data.deadline
                 ? 'Cutoff ' + eventDate(data.deadline)
-                : 'Save a deadline and rubric to open submissions.'}
+                : 'Save a deadline to open submissions.'}
             </p>
             <div className="actions">
               <button
@@ -284,8 +274,8 @@ export function Organizer({
             act={act}
             setNotice={setNotice}
           />
-          <details className="reg-card setup" open={!data.guideReady || undefined}>
-            <summary>Deadline and evaluation rubric</summary>
+          <details className="reg-card setup">
+            <summary>Submission deadline</summary>
             <form onSubmit={settings}>
               <label>
                 Deadline in your browser’s time zone
@@ -304,28 +294,6 @@ export function Organizer({
               </small>
               <button className="reg-secondary" disabled={!!busy || data.started}>
                 Save event settings
-              </button>
-            </form>
-            <form onSubmit={guide}>
-              <label>
-                Confidential judging guide
-                <input
-                  required
-                  name="file"
-                  type="file"
-                  accept=".md,text/markdown,text/plain"
-                  disabled={data.started}
-                />
-              </label>
-              <small>
-                {data.guideReady
-                  ? 'A guide is loaded.'
-                  : 'Start judging loads the approved guide from private storage. You can also import a revised guide here.'}{' '}
-                Starting the batch freezes the guide and each team’s latest
-                accepted submission.
-              </small>
-              <button className="reg-secondary" disabled={!!busy || data.started}>
-                Import guide
               </button>
             </form>
           </details>

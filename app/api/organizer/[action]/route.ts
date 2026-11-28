@@ -1,6 +1,5 @@
 import { checkModelAccess } from '@/judge/model';
 import { cloudLauncher, judgeModelId } from '@/judge/cloud';
-import { importGuide } from '@/judge/guide';
 import { configure, freezeBatch, desk } from '@/lib/store';
 import { sameOrigin, throttle, login, logout, currentAdmin } from '@/lib/auth';
 import { createAdmin, assignSeat, vote, reviewSubmission } from '@/lib/jury';
@@ -19,8 +18,8 @@ export async function GET(
     if (action !== 'guide') throw new InputError('Unknown resource.', 404);
     if (!admin.owner && !admin.seat)
       throw new InputError('Jury access required.', 403);
-    const [e] = await db()`SELECT guide FROM event_settings WHERE singleton`;
-    if (!e.guide) throw new InputError('The guide has not been imported.', 404);
+    const [e] = await db()`SELECT guide FROM event_settings WHERE singleton AND started_at IS NOT NULL`;
+    if (!e?.guide) throw new InputError('The frozen guide is available after judging starts.', 404);
     return new Response(e.guide, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
@@ -92,20 +91,16 @@ export async function POST(
           await sql`INSERT INTO podium_decisions VALUES(${signature},${sql.json(order)},${reason}) ON CONFLICT(signature) DO UPDATE SET team_order=excluded.team_order,reason=excluded.reason`;
           break;
         }
-        case 'guide': {
-          await importGuide(body.guide);
-          break;
-        }
         case 'settings':
           await configure(String(body.deadline));
           break;
         case 'judge': {
           const launcher = await cloudLauncher();
           const [event] =
-            await db()`SELECT guide IS NULL AS needs_guide,started_at FROM event_settings WHERE singleton`;
+            await db()`SELECT started_at FROM event_settings WHERE singleton`;
           const model = judgeModelId;
           const approvedGuide =
-            event.needs_guide && !event.started_at
+            !event.started_at
               ? await launcher.approvedGuide()
               : undefined;
           if (!event.started_at) await checkModelAccess(model);

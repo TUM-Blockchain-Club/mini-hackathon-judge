@@ -95,7 +95,7 @@ export async function cloudLauncher() {
       );
       if (!res.ok)
         throw new InputError(
-          'The approved guide could not be loaded. Import it at the organizer desk.',
+          'The approved private guide could not be loaded. Check storage access and retry.',
           503,
         );
       const guide = await res.text();
@@ -104,7 +104,7 @@ export async function cloudLauncher() {
         '29b7fe0c17cd1fbec491dc76ea987c1e7ec31670bbbce46efd380f37264aa6ce'
       )
         throw new InputError(
-          'The approved guide revision has changed. Import the intended revision at the organizer desk.',
+          'The private guide does not match the approved revision. Restore the approved file before starting.',
           409,
         );
       return validateGuide(guide);

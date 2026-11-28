@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       return Response.json({ model, available: true });
     }
     const [event] =
-      await db()`SELECT guide IS NOT NULL AS guide_ready FROM event_settings WHERE singleton`;
+      await db()`SELECT started_at IS NOT NULL AND guide IS NOT NULL AS guide_ready FROM event_settings WHERE singleton`;
     const launcher = await cloudLauncher();
     const guideReady = Boolean(
       event.guide_ready || (await launcher.approvedGuide()),

@@ -7,7 +7,6 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { judgeSubmission } from '../judge/workflow';
 import { officialRubric } from '../judge/official';
-import { importGuide } from '../judge/guide';
 import {
   addTeam,
   configure,
@@ -138,7 +137,8 @@ it('starts eleven independent judges and saves one evidence-backed scorecard per
   const guidePath =
     process.env.TEST_JUDGING_GUIDE_FILE ||
     new URL('./fixtures/jury-guide.md', import.meta.url);
-  await importGuide(await readFile(guidePath, 'utf8'));
+  const approvedGuide = await readFile(guidePath, 'utf8');
+  await db()`UPDATE event_settings SET guide='Previously saved draft' WHERE singleton`;
   await configure(new Date(Date.now() + 30_000).toISOString(), officialRubric);
   await Promise.all(
     Array.from({ length: 11 }, async (_, i) => {
@@ -155,7 +155,8 @@ it('starts eleven independent judges and saves one evidence-backed scorecard per
   await db()`UPDATE submissions SET submitted_at=submitted_at-interval '12 minutes'`;
   const updatedDeadline = new Date(Date.now() - 601000);
   await configure(updatedDeadline.toISOString());
-  const ids = await freezeBatch();
+  const ids = await freezeBatch(true, { model: 'gpt-6-luna', snapshot: 'snap-fixture', approvedGuide });
+  expect((await db()`SELECT guide FROM event_settings WHERE singleton`)[0].guide).toBe(approvedGuide);
   const guides = await db()`SELECT rubric->'guide'->>'instructions' AS instructions FROM judge_runs`;
   expect(guides).toHaveLength(11);
   for (const { instructions } of guides) {

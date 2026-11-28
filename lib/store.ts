@@ -172,7 +172,9 @@ export async function freezeBatch(
           'Configure the OpenAI project key in GEMINI_API_KEY and the sandbox before starting.',
           503,
         );
-      if (!e.guide && target?.approvedGuide) {
+      if (officialOnly && !target?.approvedGuide)
+        throw new InputError('The approved private guide is required to start judging.', 503);
+      if (target?.approvedGuide) {
         e.guide = target.approvedGuide;
         e.rubric = officialRubric;
         await tx`UPDATE event_settings SET guide=${target.approvedGuide},rubric=${tx.json(officialRubric)} WHERE singleton`;
@@ -181,12 +183,12 @@ export async function freezeBatch(
       const official = rubric.version === officialVersion;
       if (officialOnly && !official)
         throw new InputError(
-          'Import the approved guide before starting official judging.',
+          'Official judging requires the approved event rubric.',
           409,
         );
       if (official && !e.guide)
         throw new InputError(
-          'Import the confidential judging guide before starting.',
+          'The approved judging guide is unavailable.',
           409,
         );
       const subs =
@@ -257,7 +259,7 @@ export async function desk(adminId: string | null = null) {
   return {
     deadline: event.deadline?.toISOString() as string | undefined,
     started: !!event.started_at,
-    guideReady: !!event.guide_ready,
+    guideReady: !!event.started_at && !!event.guide_ready,
     rubric: (event.rubric ?? officialRubric) as Rubric,
     teams: standings(teams, decisions),
   };

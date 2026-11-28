@@ -1,5 +1,4 @@
-import { officialRubric } from './official';
-import { db, InputError } from '../lib/db';
+import { InputError } from '../lib/db';
 import { digest } from '../lib/artifacts';
 const sections = {
   exchange: ['### 2.1', '### 2.2', 'EX-'],
@@ -45,13 +44,4 @@ export function validateGuide(raw: unknown) {
     throw new InputError('Choose the internal judging guide Markdown file.');
   for (const k of Object.keys(sections)) trackGuide(raw, k);
   return raw;
-}
-
-export async function importGuide(input: unknown) {
-  const text = validateGuide(input),
-    sql = db();
-  const saved =
-    await sql`UPDATE event_settings SET guide=${text},rubric=${sql.json(officialRubric)} WHERE singleton AND started_at IS NULL RETURNING singleton`;
-  if (!saved.length)
-    throw new InputError('The guide is frozen for this batch.', 409);
 }
