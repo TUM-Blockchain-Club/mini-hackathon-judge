@@ -792,6 +792,41 @@ try {
     (await isolated`SELECT count(*)::int n FROM jury_decisions`)[0].n,
     1,
   );
+  await desk.goto(origin + '/admin');
+  await desk.getByRole('button', { name: 'Legacy team 1 member' }).click();
+  const deleteButton = desk.getByRole('button', { name: 'Delete team' });
+  const teamUrl = origin + '/api/admin/teams/' + soloProfile.id;
+  const stale = { name: legacyData.name, revision: soloProfile.revision };
+  assert.equal((await p.request.delete(teamUrl, { data: stale })).status(), 401);
+  assert.equal((await desk.request.delete(teamUrl, { data: stale })).status(), 409);
+  const [frozenTeam] = await isolated`SELECT revision FROM team_profiles WHERE team_id=${me.id}`;
+  assert.equal((await desk.request.delete(origin + '/api/admin/teams/' + me.id, {
+    data: { name, revision: frozenTeam.revision },
+  })).status(), 409);
+  await isolated`INSERT INTO submissions(team_id,title,focus,source,filename,content,digest)
+    VALUES(${soloProfile.id},'Delete fixture','tax-A','upload','test.txt','test','fixture')`;
+  await isolated`INSERT INTO pitch_ballots(team_id,admin_id,p1,p2,p3,p4)
+    SELECT ${soloProfile.id},admin_id,1,1,1,1 FROM pitch_ballots WHERE team_id=${me.id}`;
+  for (const answers of [[false], [true, false], [true, true]]) {
+    const prompts = [];
+    const respond = async (dialog) => {
+      prompts.push(dialog.message());
+      if (answers[prompts.length - 1]) await dialog.accept();
+      else await dialog.dismiss();
+    };
+    desk.on('dialog', respond);
+    await deleteButton.click();
+    desk.off('dialog', respond);
+    assert.equal(prompts.length, answers.length);
+    assert.ok(prompts.every((message) => message.includes(legacyData.name)));
+    if (!answers.every(Boolean)) assert.equal(await deleteButton.isVisible(), true);
+  }
+  await desk.getByText('Legacy team deleted.').waitFor();
+  assert.equal(await desk.getByRole('button', { name: 'Legacy team 1 member' }).count(), 0);
+  for (const table of ['submissions', 'pitch_ballots', 'team_sessions', 'team_profiles']) {
+    const [row] = await isolated`SELECT count(*)::int AS n FROM ${isolated(table)} WHERE team_id=${soloProfile.id}`;
+    assert.equal(row.n, 0);
+  }
   assert.deepEqual(errors, []);
   console.log(
     'Browser pass: registration, roster bounds, team name validation, concurrent teammate login/logout, signed-in directory, team isolation, admin create/inspect/edit, submission revisions, legacy links, mobile layout, private guide, jury seats, late cutoff, ballots, demo review and podium ties.',

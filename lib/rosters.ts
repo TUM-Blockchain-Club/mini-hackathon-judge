@@ -92,6 +92,34 @@ export async function saveRoster(
     return { id };
   });
 }
+export async function deleteTeam(id: string, name: string, revision: number) {
+  await db().begin(async (tx) => {
+    // Serialize with the batch freeze before locking the team and its profile.
+    await tx`SELECT singleton FROM event_settings WHERE singleton FOR SHARE`;
+    const [team] = await tx`SELECT name FROM teams WHERE id=${id} FOR UPDATE`;
+    if (!team) throw new InputError('Team not found.', 404);
+    const [profile] =
+      await tx`SELECT revision FROM team_profiles WHERE team_id=${id} FOR UPDATE`;
+    if (team.name !== name || (profile?.revision ?? 0) !== revision)
+      throw new InputError(
+        'This team changed. Reload its details before deleting.',
+        409,
+      );
+    const [frozen] =
+      await tx`SELECT 1 FROM submissions s JOIN judge_runs j ON j.submission_id=s.id WHERE s.team_id=${id} LIMIT 1`;
+    if (frozen)
+      throw new InputError(
+        'This team has a frozen judging run and must stay in the event record.',
+        409,
+      );
+    await tx`DELETE FROM pitch_ballots WHERE team_id=${id}`;
+    await tx`DELETE FROM submissions WHERE team_id=${id}`;
+    await tx`DELETE FROM team_sessions WHERE team_id=${id}`;
+    await tx`DELETE FROM team_profiles WHERE team_id=${id}`;
+    await tx`DELETE FROM teams WHERE id=${id}`;
+  });
+}
+
 export async function authenticateTeam(input: unknown) {
   const data = parse(loginInput, input),
     sql = db();

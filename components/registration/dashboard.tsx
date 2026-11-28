@@ -63,6 +63,32 @@ export function AdminDesk() {
     }
   }
   const selected = teams?.find((t) => t.id === selection);
+  async function removeTeam(team: TeamProfile) {
+    if (
+      !window.confirm(
+        `Delete ${team.name} and its entire roster? This also removes its submissions and pitch ballots and signs out its members.`,
+      )
+    )
+      return;
+    if (
+      !window.confirm(`Permanently delete ${team.name}? This cannot be undone.`)
+    )
+      return;
+    setLoading(true);
+    setNotice('');
+    try {
+      await send('/api/admin/teams/' + team.id, 'DELETE', {
+        name: team.name,
+        revision: team.revision,
+      });
+      setSelection(null);
+      setNotice(`${team.name} deleted.`);
+      await reload();
+    } catch (e) {
+      setError(problem(e));
+      setLoading(false);
+    }
+  }
   async function saved() {
     setNotice(mode === 'create' ? 'Team created.' : 'Team updated.');
     setMode('inspect');
@@ -178,6 +204,12 @@ export function AdminDesk() {
                   </button>
                 </div>
                 <Roster team={selected} />
+                <button
+                  className="reg-secondary"
+                  onClick={() => removeTeam(selected)}
+                >
+                  Delete team
+                </button>
               </>
             )
           ) : (
