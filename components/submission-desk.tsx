@@ -6,7 +6,6 @@ import { Activity, useCallback, useEffect, useRef, useState } from 'react';
 import { LoginForm, RosterForm, problem, send } from './registration/forms';
 import { TeamDirectory } from './registration/team-directory';
 import { Submission } from './submission';
-import { eventDate } from '@/lib/event';
 import type { SubmissionReceipt } from '@/lib/types';
 
 type Desk = {
@@ -105,18 +104,6 @@ export function SubmissionDesk({ board }: { board: boolean }) {
   const team = desk?.team;
   return (
     <section className={board ? 'board-shell' : 'reg-card submission-card'}>
-      {!board && desk?.deadline && (
-        <p className="submission-deadline">
-          Submission deadline <strong>{eventDate(desk.deadline)}</strong>
-          {desk.closes && (
-            <>
-              {' '}
-              · Late entries through {eventDate(desk.closes)} incur a 5-point
-              deduction.
-            </>
-          )}
-        </p>
-      )}
       <div className="submission-team">
         {team ? (
           <>

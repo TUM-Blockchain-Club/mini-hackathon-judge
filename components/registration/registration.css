@@ -515,15 +515,6 @@
 .resource-list svg {
   flex-shrink: 0;
 }
-.submission-deadline {
-  margin: 0 0 16px;
-  font-size: 14px;
-  color: var(--soft);
-}
-.submission-deadline strong {
-  color: var(--text);
-  margin-left: 6px;
-}
 .submission-team,
 .submission-access-actions,
 .submission-send {
