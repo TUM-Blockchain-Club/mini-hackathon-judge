@@ -1,6 +1,6 @@
 import { currentTeam } from '@/lib/rosters';
 import { capture } from '@/lib/artifacts';
-import { publicEvent, saveSubmission } from '@/lib/store';
+import { latestReceipt, publicEvent, saveSubmission } from '@/lib/store';
 import { sameOrigin, throttle } from '@/lib/auth';
 import { InputError } from '@/lib/db';
 import { failure } from '@/lib/http';
@@ -9,7 +9,11 @@ export async function GET() {
   try {
     const [event, team] = await Promise.all([publicEvent(), currentTeam()]);
     return Response.json(
-      { ...event, team: team ? { id: team.id, name: team.name } : null },
+      {
+        ...event,
+        team: team ? { id: team.id, name: team.name } : null,
+        receipt: team ? await latestReceipt(team.id) : null,
+      },
       { headers: { 'Cache-Control': 'private, no-store' } },
     );
   } catch (err) {
@@ -38,6 +42,7 @@ export async function POST(request: Request) {
       String(data.get('title') ?? ''),
       String(data.get('focus') ?? ''),
       await capture(data),
+      data.get('ownTopic'),
     );
     return Response.json({ ...receipt, team: team.name }, { status: 201 });
   } catch (err) {

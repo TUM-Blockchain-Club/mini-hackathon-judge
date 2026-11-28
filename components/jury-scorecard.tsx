@@ -1,4 +1,4 @@
-import { focuses } from '@/lib/event';
+import { focusLabel } from '@/lib/event';
 import type { TeamRow } from '@/lib/types';
 export function JuryScorecard({
   team: t,
@@ -17,7 +17,7 @@ export function JuryScorecard({
     <details>
       <summary>AI scorecard · {t.rubric?.version}</summary>
       <p>
-        {t.focus && focuses[t.focus]} · {t.source} · SHA-256{' '}
+        {t.focus && focusLabel(t.focus, t.own_topic)} · {t.source} · SHA-256{' '}
         <code>{t.digest}</code>
         {t.guide_revision && (
           <>

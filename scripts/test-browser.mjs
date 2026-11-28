@@ -400,7 +400,20 @@ try {
   await p.reload();
   await p.getByLabel('Project title').fill('Wallet comparison');
   await p.getByLabel('Track', { exact: true }).selectOption('wallet');
-  await p.getByLabel('Focus', { exact: true }).selectOption('wallet-B');
+  const topicField = p.getByLabel('What is your team’s focus?');
+  const customTopic = 'Compare wallet recovery instructions for beginners';
+  await p.getByLabel('Focus', { exact: true }).selectOption('wallet-own');
+  assert.equal(
+    await topicField.evaluate((input) => input.checkValidity()),
+    false,
+  );
+  await topicField.fill(customTopic);
+  await p.getByLabel('Track', { exact: true }).selectOption('exchange');
+  assert.equal(await topicField.count(), 0);
+  await p.getByLabel('Track', { exact: true }).selectOption('wallet');
+  await p.getByLabel('Focus', { exact: true }).selectOption('wallet-own');
+  assert.equal(await topicField.inputValue(), '');
+  await topicField.fill(customTopic);
   await p.getByRole('radio', { name: 'File upload' }).check();
   await p.locator('input[type=file]').setInputFiles({
     name: 'observations.md',
@@ -409,11 +422,21 @@ try {
   });
   await p.getByRole('button', { name: 'Submit project' }).click();
   await p.getByText('Project received.').waitFor();
+  await p.reload();
+  await p.getByText(customTopic, { exact: false }).waitFor();
+  await desk.reload();
+  await desk
+    .locator('article')
+    .filter({ hasText: name })
+    .getByText(customTopic, { exact: false })
+    .waitFor();
   assert.equal(new URL(p.url()).pathname, '/submit');
   await p.getByRole('button', { name: 'Submit a revision' }).click();
+  assert.equal(await topicField.inputValue(), customTopic);
   await p.getByLabel('Project title').fill('Wallet comparison, revised');
   await p.getByLabel('Track', { exact: true }).selectOption('wallet');
   await p.getByLabel('Focus', { exact: true }).selectOption('wallet-A');
+  assert.equal(await topicField.count(), 0);
   await p.getByRole('radio', { name: 'File upload' }).check();
   await p.locator('input[type=file]').setInputFiles({
     name: 'observations.md',
@@ -555,6 +578,7 @@ try {
     method: 'file',
     title: 'Late revision',
     focus: 'tax-own',
+    ownTopic: 'Compare tax rounding methods',
     file: {
       name: 'proof.txt',
       mimeType: 'text/plain',
@@ -693,11 +717,9 @@ try {
   await isolated`INSERT INTO pitch_ballots(team_id,admin_id,p1,p2,p3,p4)
     SELECT ${inviteTeam.id},admin_id,15,10,9,9 FROM pitch_ballots WHERE team_id=${me.id}`;
   await desk.reload();
-  const invitedRow = desk
-    .locator('article')
-    .filter({
-      has: desk.getByRole('heading', { name: 'Invite fixture', exact: true }),
-    });
+  const invitedRow = desk.locator('article').filter({
+    has: desk.getByRole('heading', { name: 'Invite fixture', exact: true }),
+  });
   await invitedRow.getByText('Place 1', { exact: true }).waitFor();
   await invitedRow.getByText('Overall 63%').waitFor();
   // Equalize the pitch and submission components to trigger an unresolved tie.

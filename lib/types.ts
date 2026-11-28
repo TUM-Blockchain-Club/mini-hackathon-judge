@@ -1,5 +1,14 @@
 import type { Card, Criterion } from '../judge/rubric';
 import type { OfficialCard } from '../judge/official';
+export type SubmissionReceipt = {
+  id: string;
+  date: string;
+  digest: string;
+  late: boolean;
+  title: string;
+  focus: string;
+  ownTopic: string | null;
+};
 export type Review = {
   requirement: string;
   label: 'observed in demo' | 'contradicted' | 'unverified';
@@ -19,6 +28,7 @@ export type TeamRow = {
   submission: string | null;
   title: string | null;
   focus: string | null;
+  own_topic: string | null;
   digest: string | null;
   source: string | null;
   filename: string | null;

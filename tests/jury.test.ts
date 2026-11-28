@@ -82,6 +82,7 @@ function team(
     submission: id,
     title: id,
     focus: 'tax-A',
+    own_topic: null,
     digest: null,
     source: null,
     filename: null,

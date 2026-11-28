@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS submissions (
   content bytea NOT NULL, digest text NOT NULL, submitted_at timestamptz NOT NULL DEFAULT clock_timestamp()
 );
 CREATE INDEX IF NOT EXISTS submission_latest ON submissions(team_id, submitted_at DESC);
+ALTER TABLE submissions ADD COLUMN IF NOT EXISTS own_topic text;
 CREATE TABLE IF NOT EXISTS judge_runs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), submission_id uuid NOT NULL UNIQUE REFERENCES submissions,
   worker text, phase text NOT NULL DEFAULT 'queued', until_at timestamptz NOT NULL,

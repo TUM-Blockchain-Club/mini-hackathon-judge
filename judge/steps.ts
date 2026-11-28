@@ -9,7 +9,7 @@ export async function claim(id: string, owner: string): Promise<Run | null> {
   'use step';
   const [r] =
     await db()`UPDATE judge_runs j SET worker=${owner},phase='inspecting' FROM submissions s WHERE j.id=${id} AND s.id=j.submission_id AND (worker IS NULL OR worker=${owner}) AND phase NOT IN ('complete','review') AND until_at>clock_timestamp()
-    RETURNING j.until_at,j.rubric,j.model,j.snapshot,s.focus`;
+    RETURNING j.until_at,j.rubric,j.model,j.snapshot,s.focus,s.own_topic`;
   return r
     ? {
         id,
@@ -20,6 +20,7 @@ export async function claim(id: string, owner: string): Promise<Run | null> {
         model: r.model,
         snapshot: r.snapshot,
         focus: r.focus,
+        participantTopic: r.own_topic,
       }
     : null;
 }
@@ -158,6 +159,7 @@ async function collectEvidence(
       phase,
       turn,
       focus: run.focus,
+      participantTopic: run.participantTopic ?? undefined,
       criteria: run.criteria,
       instructions: run.guide?.instructions,
       reference:

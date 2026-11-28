@@ -4,12 +4,14 @@ import { LoginForm, RosterForm, problem, send } from './registration/forms';
 import { TeamDirectory } from './registration/team-directory';
 import { Submission } from './submission';
 import { eventDate } from '@/lib/event';
+import type { SubmissionReceipt } from '@/lib/types';
 
 type Desk = {
   state: 'open' | 'late' | 'closed' | 'pending' | 'unavailable';
   deadline?: string;
   closes?: string;
   team: { id: string; name: string } | null;
+  receipt: SubmissionReceipt | null;
 };
 type Access = 'login' | 'signup';
 
@@ -88,7 +90,7 @@ export function SubmissionDesk() {
       await send('/api/team/logout', 'POST');
       previousTeam.current = undefined;
       setDirectoryFor(null);
-      setDesk((info) => info && { ...info, team: null });
+      setDesk((info) => info && { ...info, team: null, receipt: null });
       await identified();
     } catch (err) {
       setError(problem(err));
@@ -184,6 +186,14 @@ export function SubmissionDesk() {
           key={team.id}
           state={desk.state}
           teamId={team.id}
+          teamName={team.name}
+          receipt={desk.receipt}
+          onSubmitted={(receipt) => {
+            setDesk((info) =>
+              info?.team?.id === team.id ? { ...info, receipt } : info,
+            );
+            void refresh();
+          }}
           refresh={refresh}
         />
       )}

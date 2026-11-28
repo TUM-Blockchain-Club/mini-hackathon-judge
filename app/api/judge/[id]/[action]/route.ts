@@ -114,7 +114,7 @@ export async function POST(
       );
     }
     const [row] =
-      await sql`SELECT j.phase,j.until_at,j.model,j.rubric,j.snapshot,j.submission_id,s.focus
+      await sql`SELECT j.phase,j.until_at,j.model,j.rubric,j.snapshot,j.submission_id,s.focus,s.own_topic
       FROM judge_runs j JOIN submissions s ON s.id=j.submission_id WHERE j.id=${id} AND j.worker=${owner}`;
     if (!row) throw new InputError('Run is owned by another execution.', 403);
     if (action === 'finalize' && row.phase === 'complete')
@@ -138,6 +138,7 @@ export async function POST(
       model: row.model,
       snapshot: row.snapshot,
       focus: row.focus,
+      participantTopic: row.own_topic,
       criteria: row.rubric.criteria,
       guide: row.rubric.guide,
     };

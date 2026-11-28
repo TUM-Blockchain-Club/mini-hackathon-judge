@@ -637,6 +637,7 @@
 }
 .submission-receipt {
   padding-top: 22px;
+  overflow-wrap: anywhere;
 }
 .submission-receipt code {
   word-break: break-all;

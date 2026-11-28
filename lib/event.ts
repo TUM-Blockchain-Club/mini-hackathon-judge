@@ -33,6 +33,11 @@ export const focuses = {
   ),
 };
 export const brief = 'https://github.com/andi-lightup/lightup-tbc-hackathon';
+export const ownTopicLimit = 200;
+export function focusLabel(focus: string, ownTopic: string | null) {
+  const label = focuses[focus];
+  return ownTopic && focus.endsWith('-own') ? `${label} · ${ownTopic}` : label;
+}
 export function eventDate(date: string | Date) {
   return new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Europe/Berlin',

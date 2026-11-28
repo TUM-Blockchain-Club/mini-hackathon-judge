@@ -13,7 +13,7 @@ import { AdminAccounts, type Account } from './admin-accounts';
 import { JuryScorecard } from './jury-scorecard';
 import type { desk } from '@/lib/store';
 import type { Admin } from '@/lib/auth';
-import { eventDate, focuses, pitchCriteria } from '@/lib/event';
+import { eventDate, focusLabel, pitchCriteria } from '@/lib/event';
 async function post(action: string, body: unknown) {
   const res = await fetch('/api/organizer/' + action, {
     method: 'POST',
@@ -342,7 +342,7 @@ export function Organizer({
             </div>
             {t.submission && (
               <p>
-                {t.title} · {focuses[t.focus!]}{' '}
+                {t.title} · {t.focus && focusLabel(t.focus, t.own_topic)}{' '}
                 <a
                   className="text-link"
                   href={'/api/artifacts/' + t.submission}

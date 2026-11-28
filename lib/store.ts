@@ -6,10 +6,10 @@ import {
 } from '../judge/official';
 import { trackGuide } from '../judge/guide';
 import { standings, type TieDecision } from './standings';
-import type { TeamRow } from './types';
+import type { SubmissionReceipt, TeamRow } from './types';
 import { db, InputError } from './db';
 import { teamHash, newTeamCode } from './auth';
-import { focuses } from './event';
+import { focuses, ownTopicLimit } from './event';
 import { type capture } from './artifacts';
 import { rubricSchema, type Rubric } from '../judge/rubric';
 
@@ -43,9 +43,18 @@ export async function saveSubmission(
   title: string,
   focus: string,
   data: Awaited<ReturnType<typeof capture>>,
-) {
+  ownTopicInput?: FormDataEntryValue | null,
+): Promise<SubmissionReceipt> {
   if (!title.trim() || title.length > 100 || !Object.hasOwn(focuses, focus))
     throw new InputError('Enter a project title and select your focus.');
+  let ownTopic: string | null = null;
+  if (focus.endsWith('-own')) {
+    ownTopic = typeof ownTopicInput === 'string' ? ownTopicInput.trim() : '';
+    if (!ownTopic || ownTopic.length > ownTopicLimit || ownTopic.includes('\0'))
+      throw new InputError(
+        `Describe your team’s focus in up to ${ownTopicLimit} characters.`,
+      );
+  }
   return db().begin(async (tx) => {
     const [e] =
       await tx`SELECT deadline,started_at FROM event_settings WHERE singleton FOR SHARE`;
@@ -53,8 +62,8 @@ export async function saveSubmission(
       throw new InputError('Submissions are closed.', 409);
     const [s] =
       await tx`WITH stamp AS MATERIALIZED (SELECT clock_timestamp() AS accepted_at)
-      INSERT INTO submissions(team_id,title,focus,source,filename,content,digest,submitted_at,late)
-      SELECT ${team},${title.trim()},${focus},${data.source},${data.filename},${data.bytes},${data.hash},accepted_at,accepted_at > ${e.deadline} FROM stamp
+      INSERT INTO submissions(team_id,title,focus,own_topic,source,filename,content,digest,submitted_at,late)
+      SELECT ${team},${title.trim()},${focus},${ownTopic},${data.source},${data.filename},${data.bytes},${data.hash},accepted_at,accepted_at > ${e.deadline} FROM stamp
       WHERE accepted_at <= ${e.deadline}::timestamptz + interval '10 minutes' RETURNING id,submitted_at,digest,late`;
     if (!s) throw new InputError('The deadline has passed.', 409);
     return {
@@ -62,8 +71,29 @@ export async function saveSubmission(
       date: s.submitted_at.toISOString(),
       digest: s.digest,
       late: s.late,
+      title: title.trim(),
+      focus,
+      ownTopic,
     };
   });
+}
+export async function latestReceipt(
+  teamId: string,
+): Promise<SubmissionReceipt | null> {
+  const [row] =
+    await db()`SELECT id, submitted_at, digest, late, title, focus, own_topic
+    FROM submissions WHERE team_id=${teamId} ORDER BY submitted_at DESC, id DESC LIMIT 1`;
+  return row
+    ? {
+        id: row.id,
+        date: row.submitted_at.toISOString(),
+        digest: row.digest,
+        late: row.late,
+        title: row.title,
+        focus: row.focus,
+        ownTopic: row.own_topic,
+      }
+    : null;
 }
 export async function configure(deadline: string, raw: unknown) {
   const date = new Date(deadline);
@@ -188,7 +218,7 @@ export async function desk(adminId: string | null = null) {
     sql<
       TeamRow[]
     >`SELECT t.id,t.name,t.pitch AS legacy_pitch,b.ballots,b.pitch_sum,b.my_ballot,
-      s.id AS submission,s.title,s.focus,s.digest,s.source,s.filename,s.submitted_at::text,s.late,
+      s.id AS submission,s.title,s.focus,s.own_topic,s.digest,s.source,s.filename,s.submitted_at::text,s.late,
       j.id AS run_id,j.phase,j.points,j.issue,j.rubric->'guide'->>'revision' AS guide_revision,j.rubric-'guide' AS rubric,j.scorecard,j.jury_review,coalesce((SELECT jsonb_agg(d.decision ORDER BY d.id) FROM jury_decisions d WHERE d.run_id=j.id),'[]'::jsonb) AS history
       FROM teams t LEFT JOIN LATERAL (SELECT * FROM submissions WHERE team_id=t.id ORDER BY submitted_at DESC,id DESC LIMIT 1) s ON true
       LEFT JOIN judge_runs j ON j.submission_id=s.id

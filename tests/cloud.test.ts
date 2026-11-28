@@ -45,8 +45,9 @@ test(
       ]);
       const [team] =
         await sql`INSERT INTO teams(name,code_hash) VALUES('Fixture','test') RETURNING id`;
+      const topic = 'Compare offline wallet recovery workflows';
       const [sub] =
-        await sql`INSERT INTO submissions(team_id,title,focus,source,filename,content,digest) VALUES(${team.id},'Fixture','wallet-A','upload','file.txt',${content},'digest') RETURNING id`;
+        await sql`INSERT INTO submissions(team_id,title,focus,own_topic,source,filename,content,digest) VALUES(${team.id},'Fixture','wallet-own',${topic},'upload','file.txt',${content},'digest') RETURNING id`;
       const criteria = [
         {
           id: 'sample',
@@ -101,6 +102,7 @@ test(
       );
       const model = new MockLanguageModelV3({
         doGenerate: async (options) => {
+          assert.ok(JSON.stringify(options.prompt).includes(topic));
           const planning = JSON.stringify(options.prompt).includes(
             'priorityCriterion',
           );

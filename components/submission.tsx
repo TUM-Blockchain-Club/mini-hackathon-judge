@@ -1,27 +1,28 @@
 'use client';
 import { useState } from 'react';
-import { tracks, eventDate } from '@/lib/event';
-type Receipt = {
-  id: string;
-  team: string;
-  date: string;
-  digest: string;
-  late: boolean;
-};
+import { tracks, eventDate, focusLabel, ownTopicLimit } from '@/lib/event';
+import type { SubmissionReceipt } from '@/lib/types';
 export function Submission({
   state,
   teamId,
+  teamName,
+  receipt,
+  onSubmitted,
   refresh,
 }: {
   state: string;
   teamId: string;
+  teamName: string;
+  receipt: SubmissionReceipt | null;
+  onSubmitted: (receipt: SubmissionReceipt) => void;
   refresh: () => Promise<void>;
 }) {
   const [method, setMethod] = useState('github'),
     [track, setTrack] = useState(''),
+    [focus, setFocus] = useState(''),
+    [editing, setEditing] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState(''),
-    [receipt, setReceipt] = useState<Receipt | null>(null);
+    [error, setError] = useState('');
   const open = state === 'open' || state === 'late';
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -41,19 +42,23 @@ export function Submission({
         if (res.status === 401 || res.status === 409) await refresh();
         throw Error(result.error ?? 'Could not submit your project.');
       }
-      setReceipt(result);
+      setEditing(false);
+      onSubmitted(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Submission failed.');
     } finally {
       setBusy(false);
     }
   }
-  if (receipt)
+  if (receipt && (!editing || !open))
     return (
       <section className="submission-receipt" role="status">
         <h2>Project received.</h2>
         <p>
-          {receipt.team} · {eventDate(receipt.date)}
+          {teamName} · {eventDate(receipt.date)}
+        </p>
+        <p>
+          {receipt.title} · {focusLabel(receipt.focus, receipt.ownTopic)}
         </p>
         <p>
           Receipt ID <code>{receipt.id}</code>
@@ -66,7 +71,14 @@ export function Submission({
           <code>{receipt.digest}</code>
         </details>
         {open && (
-          <button className="reg-secondary" onClick={() => setReceipt(null)}>
+          <button
+            className="reg-secondary"
+            onClick={() => {
+              setTrack(receipt.focus.split('-')[0]);
+              setFocus(receipt.focus);
+              setEditing(true);
+            }}
+          >
             Submit a revision
           </button>
         )}
@@ -76,7 +88,12 @@ export function Submission({
     <form className="reg-form project-form" onSubmit={submit}>
       <label>
         Project title
-        <input name="title" required maxLength={100} />
+        <input
+          name="title"
+          required
+          maxLength={100}
+          defaultValue={receipt?.title}
+        />
       </label>
       <div className="submission-choices">
         <label>
@@ -85,7 +102,10 @@ export function Submission({
             aria-label="Track"
             required
             value={track}
-            onChange={(e) => setTrack(e.target.value)}
+            onChange={(e) => {
+              setTrack(e.target.value);
+              setFocus('');
+            }}
           >
             <option value="">Select track</option>
             {tracks.map((t) => (
@@ -98,11 +118,11 @@ export function Submission({
         <label>
           Focus
           <select
-            key={track}
             aria-label="Focus"
             name="focus"
             required
-            defaultValue=""
+            value={focus}
+            onChange={(e) => setFocus(e.target.value)}
             disabled={!track}
           >
             <option value="">Select focus</option>
@@ -119,6 +139,21 @@ export function Submission({
           </select>
         </label>
       </div>
+      {focus.endsWith('-own') && (
+        <label>
+          What is your team’s focus?
+          <input
+            name="ownTopic"
+            required
+            pattern={'.*\\S.*'}
+            maxLength={ownTopicLimit}
+            defaultValue={
+              receipt?.focus === focus ? (receipt.ownTopic ?? '') : ''
+            }
+            placeholder="Describe the specific question your project investigates"
+          />
+        </label>
+      )}
       <fieldset className="submission-method">
         <legend>Submit as</legend>
         {[

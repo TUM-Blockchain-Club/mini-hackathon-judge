@@ -24,10 +24,11 @@ const resource = (id: string) => ({ params: Promise.resolve({ id }) });
 const password = 'private-fixture-password-only';
 const members = [{ firstName: 'Example', surname: 'Member' }];
 const roster = (name: string) => ({ name, password, members });
-function project() {
+function project(focus = 'tax-A', ownTopic?: string) {
   const form = new FormData();
   form.set('title', 'Example project');
-  form.set('focus', 'tax-A');
+  form.set('focus', focus);
+  if (ownTopic !== undefined) form.set('ownTopic', ownTopic);
   form.set('method', 'file');
   form.set('file', new File(['example'], 'notes.md'));
   return new Request(url, { method: 'POST', body: form });
@@ -178,6 +179,39 @@ describe(
       await db()`UPDATE login_attempts SET starts=now()-interval '6 minutes'`;
       await expectStatus(login(password), 200);
       await expectStatus(adminTeams.GET(), 200);
+    });
+
+    it('requires a custom focus for own topics and only returns the signed-in team’s latest revision', async () => {
+      await expectStatus(
+        teams.POST(post(roster('Own_Topic')), action('register')),
+        201,
+      );
+      for (const topic of [undefined, '   ', 'x'.repeat(201)]) {
+        await expectStatus(submissions.POST(project('tax-own', topic)), 400);
+      }
+      const topic = 'Compare handling of staking rewards';
+      const receipt = await submissions.POST(
+        project('tax-own', '  ' + topic + '  '),
+      );
+      assert.equal(receipt.status, 201);
+      assert.equal((await receipt.json()).ownTopic, topic);
+      const latest = async () =>
+        (await (await submissions.GET()).json()).receipt;
+      assert.equal((await latest()).ownTopic, topic);
+      const device = jar;
+      jar = new Map();
+      assert.equal(await latest(), null);
+      await expectStatus(
+        teams.POST(post(roster('Other_Team')), action('register')),
+        201,
+      );
+      assert.equal(await latest(), null);
+      jar = device;
+      await expectStatus(
+        submissions.POST(project('tax-B', 'stale topic')),
+        201,
+      );
+      assert.equal((await latest()).ownTopic, null);
     });
 
     it('timestamps late receipts on the server and keeps the last accepted version after cutoff', async () => {
