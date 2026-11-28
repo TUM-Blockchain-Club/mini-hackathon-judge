@@ -80,6 +80,16 @@ export function RosterForm({
       setNextKey(nextKey + 1);
     }
   }
+  function remove(key: number) {
+    if (busy || members.length <= 1) return;
+    const saved = team?.members[key];
+    if (saved) {
+      const person = [saved.firstName, saved.surname].join(' ');
+      if (!window.confirm(`Remove ${person} from ${team.name}?`)) return;
+      if (!window.confirm(`Confirm removal of ${person}? Select Save changes to update the roster.`)) return;
+    }
+    setMembers((current) => current.filter((member) => member.key !== key));
+  }
   function change(key: number, field: keyof Member, value: string) {
     setMembers((old) =>
       old.map((m) => (m.key === key ? { ...m, [field]: value } : m)),
@@ -181,9 +191,8 @@ export function RosterForm({
                   type="button"
                   className="reg-remove"
                   aria-label={'Remove member ' + (i + 1)}
-                  onClick={() =>
-                    setMembers(members.filter((x) => x.key !== m.key))
-                  }
+                  disabled={busy}
+                  onClick={() => remove(m.key)}
                 >
                   <Trash2 size={16} />
                 </button>

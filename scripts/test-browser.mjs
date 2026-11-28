@@ -271,10 +271,29 @@ try {
   await desk.getByRole('button', { name: name + ' 3 members' }).click();
   await desk.getByText('Ren Weiss').waitFor();
   await desk.getByRole('button', { name: 'Edit team' }).click();
-  await desk.getByRole('button', { name: 'Remove member 3' }).click();
+  for (const answers of [[false], [true, false], [true, true]]) {
+    const prompts = [];
+    const respond = async (dialog) => {
+      prompts.push(dialog.message());
+      if (answers[prompts.length - 1]) await dialog.accept();
+      else await dialog.dismiss();
+    };
+    desk.on('dialog', respond);
+    await desk.getByRole('button', { name: 'Remove member 3' }).click();
+    desk.off('dialog', respond);
+    assert.equal(prompts.length, answers.length);
+    const person = me.members[2].firstName + ' ' + me.members[2].surname;
+    assert.ok(prompts.every((message) => message.includes(person)));
+    assert.equal(await desk.getByLabel('First name', { exact: true }).count(), answers.every(Boolean) ? 2 : 3);
+  }
   await desk.getByLabel('Surname', { exact: true }).first().fill('Choi');
   await desk.getByRole('button', { name: 'Save changes' }).click();
   await desk.getByText('Jae Choi').waitFor();
+  const updatedTeam = await (await p.request.get(origin + '/api/team/me')).json();
+  assert.deepEqual(updatedTeam.members, [
+    { firstName: 'Jae', surname: 'Choi' },
+    { firstName: 'Ada', surname: 'Fern' },
+  ]);
   assert.equal(
     (
       await desk.request.patch(origin + '/api/admin/teams/' + me.id, {
