@@ -112,38 +112,54 @@ export function ParticipantBoard({
       <div className="board-guides">
         <section className="reg-card">
           <h2>What to submit</h2>
-          <p>
-            Paste your public GitHub repository’s main URL, for example{' '}
-            <code>https://github.com/team/project</code>. Enter your project
-            name, a description of up to 500 characters, your track and focus.
-          </p>
-          <p>
-            You can submit the link early and keep working in the same repository.
-            Your receipt records the version at submission. For judging, the
-            system automatically selects the latest default-branch commit dated
-            at or before the commit cutoff. Include instructions for reproducing
-            your result in the repository.
-          </p>
-          <p>
-            Explain your weights out of 100. Ask another team to reproduce one
-            result and record what they found.
-          </p>
+          <ul>
+            <li>
+              Enter your <strong>project name</strong>, a description of up to
+              500 characters, your track and your focus.
+            </li>
+            <li>
+              Submit your <strong>public GitHub repository URL</strong>, for
+              example <code>https://github.com/team/project</code>.
+            </li>
+            <li>
+              You can submit early and keep working. Your receipt records the
+              version at submission. Judging uses the latest default-branch
+              commit dated at or before the cutoff.
+            </li>
+            <li>
+              Include instructions for reproducing your result and explain how
+              your scoring weights add up to 100.
+            </li>
+            <li>
+              Ask another team to reproduce one result and record what they
+              found.
+            </li>
+          </ul>
         </section>
         <section className="reg-card">
           <h2>Your five-minute demo</h2>
           <p>
-            <strong>Saturday, 28 November · 17:00–18:00 CET · Pitches and awards</strong>
+            <strong>
+              Pitches and awards · Saturday, 28 November · 17:00–18:00 CET
+            </strong>
           </p>
-          <p>
-            Open with one result from your test. Show the evidence, explain what
-            LIGHT UP can use and leave time for questions within your five
-            minutes.
-          </p>
-          <p>
-            <strong>50 points</strong> for the submission +{' '}
-            <strong>50 points</strong> for the jury pitch. All tracks share one
-            ranking.
-          </p>
+          <ul>
+            <li>
+              Open with <strong>one result</strong> from your test.
+            </li>
+            <li>
+              Show the evidence and explain how LIGHT UP can use the result.
+            </li>
+            <li>
+              Leave time for questions within your <strong>five minutes</strong>
+              .
+            </li>
+            <li>
+              All tracks share one ranking, with{' '}
+              <strong>50 points for the submission</strong> and{' '}
+              <strong>50 for the jury pitch</strong>.
+            </li>
+          </ul>
         </section>
       </div>
     </div>

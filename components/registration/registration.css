@@ -719,6 +719,17 @@
 .board-tracks li { padding: 3px; }
 .board-tracks li::marker { color: var(--brand); font-weight: 700; }
 .board-guides .reg-card { box-shadow: none; }
+.board-guides ul {
+  display: grid;
+  gap: 10px;
+  padding-left: 1.25em;
+  margin: 16px 0 0;
+  color: var(--soft);
+  font-size: clamp(16px, 1.5vw, 19px);
+  overflow-wrap: anywhere;
+}
+.board-guides li::marker { color: var(--brand); }
+.board-guides li strong { color: var(--text); }
 @media(max-width:760px) {
   .board-lead, .board-tracks > div, .board-guides { grid-template-columns: minmax(0,1fr); }
 }
