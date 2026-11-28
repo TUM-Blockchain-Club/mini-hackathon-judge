@@ -176,6 +176,12 @@ try {
       'https://youtu.be/Vs46Y9VhqGM',
     ],
   );
+  const [materials] = await Promise.all([
+    p.waitForEvent('download'),
+    p.getByRole('link', { name: /Participant materials \(ZIP\)/ }).click(),
+  ]);
+  assert.equal(materials.suggestedFilename(), 'participant-materials.zip');
+  assert.equal(await materials.failure(), null);
   for (const filename of ['light-up-hackathon-slides.pdf', 'student-ai-tools.pdf']) {
     const pdf = await p.request.get(origin + '/docs/' + filename);
     assert.equal(pdf.status(), 200);

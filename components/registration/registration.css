@@ -491,12 +491,27 @@
   letter-spacing: -0.065em;
   margin: 0 0 24px;
 }
+.resource-groups {
+  display: grid;
+  gap: clamp(16px, 3vw, 24px);
+}
+.resource-group {
+  --resource-inset: clamp(16px, 3vw, 28px);
+  padding: 0;
+}
+.resource-group h2 {
+  margin: 0;
+  padding: 18px var(--resource-inset) 14px;
+  font-size: clamp(18px, 2vw, 22px);
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+}
 .resource-list {
   list-style: none;
   margin: 0;
-  padding-block: 8px;
+  padding: 0;
 }
-.resource-list li + li {
+.resource-list li {
   border-top: 1px solid var(--edge);
 }
 .resource-list a {
@@ -504,16 +519,32 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px 0;
+  min-height: 48px;
+  padding: 12px var(--resource-inset);
   font-weight: 600;
 }
+.resource-list a > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.resource-list small {
+  display: block;
+  margin-top: 3px;
+  color: var(--soft);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
 .resource-list a:hover,
-.resource-list a:focus-visible,
-.resource-list svg {
+.resource-list a:focus-visible {
   color: var(--brand);
+  background: var(--bg);
+}
+.reg-site .resource-list a:focus-visible {
+  outline-offset: -3px;
 }
 .resource-list svg {
   flex-shrink: 0;
+  color: var(--brand);
 }
 .submission-team,
 .submission-access-actions,
