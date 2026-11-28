@@ -94,7 +94,6 @@ export function ParticipantBoard({
       </nav>
       <section className="board-tracks">
         <h2>Choose your track</h2>
-        <p>Choose a suggested path or bring your own topic within the track.</p>
         <div>
           {tracks.map((track) => (
             <article key={track.id} className="reg-card">
