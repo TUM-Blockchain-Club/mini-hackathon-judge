@@ -545,19 +545,18 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 8px;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px 16px;
+  font-size: 16px;
 }
 .team-account-nav a {
-  padding: 10px 12px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 44px;
+  gap: 10px;
   font-weight: 650;
-}
-.team-account-nav a[aria-current] {
-  color: var(--bg);
-  background: var(--brand);
-}
-.team-account-nav a:hover {
-  text-decoration: underline;
-  text-underline-offset: 4px;
 }
 .submission-action {
   border: 0;
@@ -652,6 +651,9 @@
   }
   .submission-team {
     align-items: flex-start;
+  }
+  .team-account-nav .reg-primary {
+    width: 100%;
   }
   .submission-choices select {
     font-size: 16px;

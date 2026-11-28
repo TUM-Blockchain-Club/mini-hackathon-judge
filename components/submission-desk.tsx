@@ -1,5 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
+import { ArrowRight } from 'lucide-react';
 import { ParticipantBoard } from './participant-board';
 import { Activity, useCallback, useEffect, useRef, useState } from 'react';
 import { LoginForm, RosterForm, problem, send } from './registration/forms';
@@ -143,18 +144,19 @@ export function SubmissionDesk({ board }: { board: boolean }) {
           </>
         ) : desk ? (
           <nav aria-label="Team account" className="team-account-nav">
-            <a
-              href="#login"
-              aria-current={access === 'login' ? 'location' : undefined}
-            >
-              Team login
-            </a>
-            <a
-              href="#signup"
-              aria-current={access === 'signup' ? 'location' : undefined}
-            >
-              Sign up a team
-            </a>
+            {access === 'login' ? (
+              <>
+                <strong>New team?</strong>
+                <a className="reg-primary" href="#signup">
+                  Sign up your team <ArrowRight size={18} aria-hidden="true" />
+                </a>
+              </>
+            ) : (
+              <>
+                <span>Already registered?</span>
+                <a className="reg-secondary" href="#login">Team login</a>
+              </>
+            )}
           </nav>
         ) : (
           <span role="status">

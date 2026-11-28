@@ -102,7 +102,14 @@ try {
   await p.getByRole('heading', { name: 'Team login' }).waitFor();
   assert.equal(await p.getByLabel('Team access code').count(), 0);
   assert.equal(await p.getByLabel('Project name').count(), 0);
-  await accountNav.getByRole('link', { name: 'Sign up a team' }).click();
+  const signupLink = accountNav.getByRole('link', { name: 'Sign up your team' });
+  for (const width of [320, 1440]) {
+    await p.setViewportSize({ width, height: 800 });
+    const bounds = await signupLink.boundingBox();
+    assert.ok(bounds && bounds.height >= 44 && bounds.x >= 0 && bounds.x + bounds.width <= width);
+  }
+  await signupLink.focus();
+  await p.keyboard.press('Enter');
   await p.getByRole('heading', { name: 'Register your team' }).waitFor();
   const signupName = p.getByLabel('Team name', { exact: true });
   await signupName.fill('Bad name');
