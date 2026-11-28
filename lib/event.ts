@@ -38,12 +38,14 @@ export function focusLabel(focus: string, ownTopic: string | null) {
   return ownTopic && focus.endsWith('-own') ? `${label} · ${ownTopic}` : label;
 }
 export function eventDate(date: string | Date) {
-  return new Intl.DateTimeFormat('en-GB', {
+  const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Europe/Berlin',
     day: 'numeric',
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
     timeZoneName: 'short',
-  }).format(new Date(date));
+  }).formatToParts(new Date(date));
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find(part => part.type === type)?.value;
+  return `${value('day')} ${value('month')} at ${value('hour')}:${value('minute')} ${value('timeZoneName')}`;
 }
