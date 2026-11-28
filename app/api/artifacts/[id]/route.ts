@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { juryAccess } from '@/lib/auth';
 import { db } from '@/lib/db';
 export async function GET(
@@ -6,7 +7,8 @@ export async function GET(
 ) {
   if (!(await juryAccess())) return new Response(null, { status: 401 });
   const { id } = await params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return new Response(null, { status: 404 });
+  if (!z.uuid().safeParse(id).success)
+    return new Response(null, { status: 404 });
   const [row] =
     await db()`SELECT content,filename FROM submissions WHERE id=${id}`;
   if (!row) return new Response(null, { status: 404 });

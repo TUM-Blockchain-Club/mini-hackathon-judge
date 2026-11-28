@@ -4,7 +4,7 @@ A participant submission page and organizer dashboard for the LIGHT UP × TUM Bl
 
 ## Run locally
 
-Use Node 22.13 or newer and PostgreSQL 15 or newer. Create a dedicated empty database. Copy `.env.example` to `.env.local`, enter the database URL and set a random organizer password of at least 24 characters. The web interface and submissions work with these two settings. Local tests use simulated model and sandbox services.
+Use Node 22.13 or newer and PostgreSQL 15 or newer. Create a dedicated empty database. Copy `.env.example` to `.env.local`, enter the database URL and set a random organizer password of at least 24 characters. Use the same table-owning database role for schema setup and for the server. The web interface and submissions work with these two settings. Local tests use simulated model and sandbox services.
 
 ```sh
 npm ci
@@ -12,7 +12,7 @@ npm run db:setup
 npm run dev
 ```
 
-Share `/signup` with new teams and `/login` with returning teammates. Both links open the relevant form on `/submit`. Teams can register one to three members, enter their project and receive a submission receipt on this page. Every member can sign in on their own device with the same team name and password. New team names use letters A–Z, digits and underscores. Existing names also work at login. Signed-in teams can open **Other teams** to see each other team’s name and its members’ first and last names. Projects and revisions require an active team login. The submission and team administration pages are prerendered. Same-origin APIs load the deadline and private session data from PostgreSQL. Run `npm run db:setup` on existing installations to add profiles and sessions.
+Share `/signup` with new teams and `/login` with returning teammates. Both links open the relevant form on `/submit`. Teams can register one to three members, enter their project and receive a submission receipt on this page. Every member can sign in on their own device with the same team name and password. New team names use letters A–Z, digits and underscores. Existing names also work at login. Signed-in teams can open **Other teams** to see each other team’s name and its members’ first and last names. Projects and revisions require an active team login. The submission and team administration pages are prerendered. Same-origin APIs load the deadline and private session data from PostgreSQL. Run `npm run db:setup` before rolling out an update that changes the schema. Setup enables row-level security on the event tables and revokes direct access from Supabase’s client roles. Organizers with a session from before server-side organizer logout was introduced must sign in again.
 
 In the **Resources** navbar tab (`/resources`), teams can open the track briefs, rating matrices, hands-on test log, submission template and pitch scoring criteria in [Andi’s hackathon repository](https://github.com/andi-lightup/lightup-tbc-hackathon). Switching between Submission and Resources keeps the current form entries and file selection. Teams can include their pitch deck in the project commit or ZIP. The [student AI tools setup guide](public/docs/student-ai-tools.pdf) is included in this project and served as a static PDF.
 

@@ -9,8 +9,9 @@ function secret() {
     throw new InputError('Organizer access has not been configured.', 503);
   return process.env.ORGANIZER_PASSWORD!;
 }
-const sign = (s: string) =>
-  createHmac('sha256', secret()).update(s).digest('hex');
+const ownerTokenPattern = /^owner\.[a-f0-9]{64}$/;
+const ownerSessionHash = (token: string) =>
+  createHmac('sha256', secret()).update(token).digest('hex');
 const equal = (a: string, b: string) =>
   timingSafeEqual(Buffer.from(digest(a)), Buffer.from(digest(b)));
 export const newTeamCode = () => randomBytes(12).toString('hex').toUpperCase();
@@ -30,10 +31,10 @@ export async function currentAdmin(): Promise<Admin | null> {
       await db()`SELECT a.id,a.name,a.seat FROM admin_sessions s JOIN admin_accounts a ON a.id=s.admin_id WHERE s.token_hash=${digest(value)} AND s.expires_at>now()`;
     return a ? { id: a.id, name: a.name, seat: a.seat, owner: false } : null;
   }
-  const [expiry, signature] = value.split('.');
-  return Number(expiry) > Date.now() &&
-    signature &&
-    equal(sign(expiry), signature)
+  if (!ownerTokenPattern.test(value)) return null;
+  const [session] =
+    await db()`SELECT 1 FROM organizer_sessions WHERE token_hash=${ownerSessionHash(value)} AND expires_at>now()`;
+  return session
     ? { id: null, name: 'Organizer', seat: null, owner: true }
     : null;
 }
@@ -58,8 +59,8 @@ export async function login(password: string, name = '') {
   } else {
     if (!equal(secret(), password))
       throw new InputError('Incorrect organizer password.', 401);
-    const expiry = String(Date.now() + 12 * 3600_000);
-    value = expiry + '.' + sign(expiry);
+    value = 'owner.' + randomBytes(32).toString('hex');
+    await db()`INSERT INTO organizer_sessions(token_hash,expires_at) VALUES(${ownerSessionHash(value)},now()+interval '12 hours')`;
   }
   (await cookies()).set(cookieName, value, {
     httpOnly: true,
@@ -74,6 +75,8 @@ export async function logout() {
   const value = jar.get(cookieName)?.value;
   if (value && /^[a-f0-9]{64}$/.test(value))
     await db()`DELETE FROM admin_sessions WHERE token_hash=${digest(value)}`;
+  if (value && ownerTokenPattern.test(value))
+    await db()`DELETE FROM organizer_sessions WHERE token_hash=${ownerSessionHash(value)} OR expires_at<=now()`;
   jar.delete(cookieName);
 }
 export async function throttle(
@@ -92,10 +95,10 @@ export async function throttle(
 }
 export function sameOrigin(request: Request) {
   const origin = request.headers.get('origin');
-  if (
-    origin &&
-    (new URL(origin).host !== request.headers.get('host') ||
-      !['https:', 'http:'].includes(new URL(origin).protocol))
-  )
+  if (origin === null && request.headers.get('sec-fetch-site') !== 'cross-site')
+    return;
+  const url = new URL(request.url);
+  const expectedHost = request.headers.get('host') || url.host;
+  if (origin !== url.protocol + '//' + expectedHost)
     throw new InputError('Request origin does not match.', 403);
 }

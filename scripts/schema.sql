@@ -69,3 +69,34 @@ CREATE TABLE IF NOT EXISTS jury_decisions (
   id bigserial PRIMARY KEY, run_id uuid NOT NULL REFERENCES judge_runs,
   decision jsonb NOT NULL, recorded_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS organizer_sessions (
+  token_hash text PRIMARY KEY, expires_at timestamptz NOT NULL
+);
+
+-- These tables are private to the server connection, which owns them. Browser
+-- sessions use the application's authenticated routes, including for the directory.
+DO $$
+DECLARE
+  table_name text;
+  api_role text;
+  event_schema text := current_schema();
+  tables text[] := ARRAY['event_settings','teams','submissions','judge_runs',
+    'observations','login_attempts','team_profiles','team_sessions','admin_accounts',
+    'admin_sessions','organizer_sessions','pitch_ballots','podium_decisions','jury_decisions'];
+  decision_sequence regclass := pg_get_serial_sequence('jury_decisions','id')::regclass;
+BEGIN
+  FOREACH table_name IN ARRAY tables LOOP
+    EXECUTE format('ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY',event_schema,table_name);
+    EXECUTE format('REVOKE ALL PRIVILEGES ON TABLE %I.%I FROM PUBLIC',event_schema,table_name);
+    FOR api_role IN SELECT rolname FROM pg_roles WHERE rolname IN ('anon','authenticated') LOOP
+      EXECUTE format('REVOKE ALL PRIVILEGES ON TABLE %I.%I FROM %I',event_schema,table_name,api_role);
+    END LOOP;
+  END LOOP;
+  IF decision_sequence IS NOT NULL THEN
+    EXECUTE format('REVOKE ALL PRIVILEGES ON SEQUENCE %s FROM PUBLIC',decision_sequence);
+    FOR api_role IN SELECT rolname FROM pg_roles WHERE rolname IN ('anon','authenticated') LOOP
+      EXECUTE format('REVOKE ALL PRIVILEGES ON SEQUENCE %s FROM %I',decision_sequence,api_role);
+    END LOOP;
+  END IF;
+END $$;
