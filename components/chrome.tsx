@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import { ArrowUpRight, LockKeyhole } from 'lucide-react';
-import { brief } from '@/lib/event';
+import { LockKeyhole } from 'lucide-react';
 export function Mark() {
   return (
     <span className="brandmark" aria-hidden="true">
@@ -45,9 +44,6 @@ export function Footer() {
           <Mark /> TUM Blockchain Club <span className="foot-x">×</span> LIGHT
           UP
         </span>
-        <a href={brief} target="_blank" rel="noreferrer">
-          Hackathon repository <ArrowUpRight size={14} />
-        </a>
       </div>
     </footer>
   );

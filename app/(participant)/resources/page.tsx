@@ -1,24 +1,13 @@
 import { ArrowUpRight } from 'lucide-react';
-import { brief } from '@/lib/event';
 
 const resources = [
-  { label: 'Andi’s hackathon brief and tracks (GitHub)', href: brief },
+  {
+    label: 'Hackathon brief, tracks, rating matrices and templates (ZIP)',
+    href: '/docs/participant-materials.zip',
+  },
   {
     label: 'Student AI tools setup guide (PDF)',
     href: '/docs/student-ai-tools.pdf',
-  },
-  { label: 'Rating matrices', href: `${brief}/tree/main/matrices` },
-  {
-    label: 'Hands-on test log',
-    href: `${brief}/blob/main/templates/hands-on-test.md`,
-  },
-  {
-    label: 'Submission template',
-    href: `${brief}/blob/main/templates/comparison.md`,
-  },
-  {
-    label: 'Pitch scoring criteria',
-    href: `${brief}/blob/main/templates/pitch-scoring.md`,
   },
 ];
 

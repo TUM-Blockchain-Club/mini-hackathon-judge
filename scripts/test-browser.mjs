@@ -141,7 +141,12 @@ try {
       .getAttribute('aria-current'),
     'page',
   );
-  assert.equal(await p.getByRole('main').getByRole('link').count(), 6);
+  assert.deepEqual(
+    await p.getByRole('main').getByRole('link').evaluateAll((links) =>
+      links.map((link) => link.getAttribute('href')),
+    ),
+    ['/docs/participant-materials.zip', '/docs/student-ai-tools.pdf'],
+  );
   assert.equal(
     await p.getByRole('textbox', { name: 'Project title' }).count(),
     0,

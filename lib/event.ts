@@ -32,7 +32,6 @@ export const focuses = {
     ),
   ),
 };
-export const brief = 'https://github.com/andi-lightup/lightup-tbc-hackathon';
 export const ownTopicLimit = 200;
 export function focusLabel(focus: string, ownTopic: string | null) {
   const label = focuses[focus];
