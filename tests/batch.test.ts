@@ -67,7 +67,7 @@ test(
       await new Promise((resolve) => setTimeout(resolve, 5));
       await db()`UPDATE submissions SET submitted_at=submitted_at-interval '12 minutes'`;
       const deadline = new Date(Date.now() - 601000);
-      const cutoff = new Date(+deadline + 300000).toISOString();
+      const cutoff = deadline.toISOString();
       // The latest revision was late under the earlier deadline and on time after extension.
       const earlier = new Date(+deadline - 180000);
       await configure(earlier.toISOString());

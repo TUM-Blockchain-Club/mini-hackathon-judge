@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { tracks, commitCutoff, eventDate, focusLabel, ownTopicLimit } from '@/lib/event';
+import { tracks, eventDate, focusLabel, ownTopicLimit } from '@/lib/event';
 import type { SubmissionReceipt } from '@/lib/types';
 export function Submission({
   state,
@@ -24,7 +24,7 @@ export function Submission({
     [editing, setEditing] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
-  const cutoff = deadline ? eventDate(commitCutoff(deadline)) : 'the commit cutoff';
+  const cutoff = deadline ? eventDate(deadline) : 'the commit cutoff';
   const open = state === 'open' || state === 'late';
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -115,10 +115,9 @@ export function Submission({
       <section className="submission-requirements" aria-label="Submission requirements">
         <strong>Submission requirements</strong>
         <ul>
-          <li>Make the repository public so the judge can download it without signing in.</li>
-          <li>Remove credentials, seed phrases, and personal data before publishing.</li>
-          <li>Push your final work and pitch deck to the default branch by {cutoff}. You can submit the repository link earlier.</li>
-          <li>Keep the archive within 24 MiB compressed and 96 MiB unpacked, with at most 2,500 entries.</li>
+          <li><strong>Make the repository public.</strong></li>
+          <li><strong>Push your final work and pitch deck to the default branch by {cutoff}.</strong></li>
+          <li>Only one team member submits the project.</li>
         </ul>
       </section>
       <div className="submission-choices">

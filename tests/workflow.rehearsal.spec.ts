@@ -160,8 +160,8 @@ it('starts eleven independent judges and saves one evidence-backed scorecard per
   const guides = await db()`SELECT rubric->'guide'->>'instructions' AS instructions FROM judge_runs`;
   expect(guides).toHaveLength(11);
   for (const { instructions } of guides) {
-    expect(instructions).toContain(updatedDeadline.toISOString());
-    expect(instructions).toContain(new Date(+updatedDeadline + 300000).toISOString());
+    expect(instructions).toContain(`Submission deadline: ${updatedDeadline.toISOString()}`);
+    expect(instructions).toContain(`Default-branch commit cutoff (inclusive): ${updatedDeadline.toISOString()}`);
   }
   fake.now = Date.now();
   vi.spyOn(Date, 'now').mockImplementation(

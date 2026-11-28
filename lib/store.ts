@@ -10,7 +10,7 @@ import { standings, type TieDecision } from './standings';
 import type { SubmissionReceipt, TeamRow } from './types';
 import { db, InputError } from './db';
 import { teamHash, newTeamCode } from './auth';
-import { commitCutoff, focuses, ownTopicLimit } from './event';
+import { focuses, ownTopicLimit } from './event';
 import { cutoffArchive, type capture } from './artifacts';
 import { rubricSchema, type Rubric } from '../judge/rubric';
 
@@ -20,7 +20,7 @@ export async function publicEvent() {
       await db()`SELECT deadline, deadline + interval '10 minutes' AS closes, started_at, clock_timestamp() AS stamp FROM event_settings WHERE singleton`;
     return {
       deadline: e.deadline?.toISOString() as string | undefined,
-      commitDeadline: e.deadline ? commitCutoff(e.deadline).toISOString() : undefined,
+      commitDeadline: e.deadline?.toISOString() as string | undefined,
       closes: e.closes?.toISOString() as string | undefined,
       state: !e.deadline
         ? 'pending'
@@ -196,7 +196,7 @@ export async function freezeBatch(
         await tx`SELECT DISTINCT ON(team_id) id,focus,source FROM submissions WHERE submitted_at <= ${e.deadline}::timestamptz + interval '10 minutes' ORDER BY team_id,submitted_at DESC,id DESC`;
       if (!subs.length)
         throw new InputError('No submissions are available to judge.', 409);
-      const cutoff = commitCutoff(e.deadline);
+      const cutoff: Date = e.deadline;
       // Bound simultaneous downloads. Persist each archive before taking the next.
       const pending = subs.values();
       async function freezeRepositories() {

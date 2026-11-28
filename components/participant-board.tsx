@@ -107,6 +107,7 @@ export function ParticipantBoard({
       <div className="board-guides">
         <section className="reg-card">
           <h2>What to submit</h2>
+          <p>Only one team member submits the project.</p>
           <ul>
             <li>Project name and description (up to 500 characters)</li>
             <li>Track and focus</li>
