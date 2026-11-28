@@ -55,7 +55,7 @@ export function ParticipantBoard({
           </strong>
           {commitDeadline && (
             <p>
-              Push your final default-branch commit by{' '}
+              Push your final work and pitch deck to the default branch by{' '}
               <b>{eventDate(commitDeadline)}</b>.
             </p>
           )}
@@ -82,7 +82,7 @@ export function ParticipantBoard({
           <small>
             {receipt
               ? 'View receipt · ' + receipt.title
-              : 'Submit your project and public repository link.'}
+              : 'Submit the link to your public GitHub repository.'}
           </small>
         </Link>
         <Link href="/resources">
@@ -113,9 +113,16 @@ export function ParticipantBoard({
         <section className="reg-card">
           <h2>What to submit</h2>
           <p>
-            Register your project name, short description, track and public
-            GitHub repository. Include the pitch deck and instructions for
-            reproducing your result on the default branch.
+            Paste your public GitHub repository’s main URL, for example{' '}
+            <code>https://github.com/team/project</code>. Enter your project
+            name, a description of up to 500 characters, your track and focus.
+          </p>
+          <p>
+            You can submit the link early and keep working in the same repository.
+            Your receipt records the version at submission. For judging, the
+            system automatically selects the latest default-branch commit dated
+            at or before the commit cutoff. Include instructions for reproducing
+            your result in the repository.
           </p>
           <p>
             Explain your weights out of 100. Ask another team to reproduce one
