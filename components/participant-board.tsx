@@ -41,10 +41,6 @@ export function ParticipantBoard({
             Read the full LIGHT UP challenge on GitHub{' '}
             <ArrowUpRight size={20} aria-hidden="true" />
           </a>
-          <small>
-            Find the full track briefs, rating matrices, sample data and
-            submission templates.
-          </small>
         </section>
         <section className="reg-card board-deadline">
           <h2>
