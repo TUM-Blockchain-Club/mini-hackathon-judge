@@ -20,7 +20,7 @@ export const rosterInput = z.object({
 });
 const password = z
   .string()
-  .min(10, 'Use at least 10 characters for the team password.')
+  .min(6, 'Use at least 6 characters for the team password.')
   .max(128, 'Use up to 128 characters for the password.');
 export const createInput = rosterInput.extend({ password });
 export const signupInput = createInput.extend({

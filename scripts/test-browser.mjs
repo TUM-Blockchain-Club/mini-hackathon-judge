@@ -64,7 +64,7 @@ try {
     errors = [];
   desk.on('pageerror', (e) => errors.push(e.message));
   const name = 'Team_Portal_QA',
-    teamPassword = 'private-fixture-pass';
+    teamPassword = 'team42';
   const p = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   p.on('pageerror', (e) => errors.push(e.message));
   for (const oldPath of ['/', '/team', '/rules']) {

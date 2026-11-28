@@ -31,12 +31,12 @@ function PasswordField({ create }: { create: boolean }) {
           name="password"
           aria-label={create ? 'Team password' : 'Password'}
           required
-          minLength={create ? 10 : 1}
+          minLength={create ? 6 : 1}
           maxLength={128}
           autoComplete={create ? 'new-password' : 'current-password'}
           type={visible ? 'text' : 'password'}
           placeholder={
-            create ? 'At least 10 characters' : 'Enter your password'
+            create ? 'At least 6 characters' : 'Enter your password'
           }
         />
         <button
