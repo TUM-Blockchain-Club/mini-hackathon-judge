@@ -298,8 +298,9 @@ export function Organizer({
                 />
               </label>
               <small>
-                Late entries close ten minutes later and lose five overall
-                points.
+                The commit cutoff is five minutes after this deadline. Late entries
+                close ten minutes after it. Saving recalculates the five-point
+                deduction for accepted submissions.
               </small>
               <button className="reg-secondary" disabled={!!busy || data.started}>
                 Save event settings

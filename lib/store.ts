@@ -102,12 +102,12 @@ export async function latestReceipt(
       }
     : null;
 }
-export async function configure(deadline: string, raw: unknown) {
+export async function configure(deadline: string, raw?: unknown) {
   const date = new Date(deadline);
   if (!Number.isFinite(+date))
     throw new InputError('Choose a valid submission deadline.');
-  const parsed = rubricSchema.safeParse(raw);
-  if (!parsed.success) throw new InputError(parsed.error.issues[0].message);
+  const parsed = raw === undefined ? undefined : rubricSchema.safeParse(raw);
+  if (parsed && !parsed.success) throw new InputError(parsed.error.issues[0].message);
   await db().begin(async (tx) => {
     const [event] =
       await tx`SELECT started_at FROM event_settings WHERE singleton FOR UPDATE`;
@@ -120,16 +120,12 @@ export async function configure(deadline: string, raw: unknown) {
         'The final cutoff would exclude an accepted receipt.',
         409,
       );
-    if (
-      (
-        await tx`SELECT 1 FROM submissions WHERE late IS DISTINCT FROM (submitted_at > ${date}) LIMIT 1`
-      ).length
-    )
-      throw new InputError(
-        'This deadline would change the penalty on an accepted receipt.',
-        409,
-      );
-    await tx`UPDATE event_settings SET deadline=${date},rubric=${tx.json(parsed.data)} WHERE singleton`;
+    await tx`UPDATE submissions SET late=(submitted_at > ${date})
+      WHERE late IS DISTINCT FROM (submitted_at > ${date})`;
+    if (parsed)
+      await tx`UPDATE event_settings SET deadline=${date},rubric=${tx.json(parsed.data)} WHERE singleton`;
+    else
+      await tx`UPDATE event_settings SET deadline=${date} WHERE singleton`;
   });
 }
 export async function addTeam(name: string) {
@@ -215,6 +211,9 @@ export async function freezeBatch(
           }
           const rules = official ? officialRubric.common : [...rubric.common, ...(rubric.focuses[s.focus] ?? [])];
           const guide = official ? trackGuide(e.guide, s.focus) : undefined;
+          if (guide) {
+            guide.instructions += `\nEvent timing for this batch overrides any example times above. Submission deadline: ${e.deadline.toISOString()}. Default-branch commit cutoff (inclusive): ${cutoff.toISOString()}. The server selected the eligible project and applies any late deduction to the overall result. Do not deduct lateness from rubric points.`;
+          }
           await tx`INSERT INTO judge_runs(submission_id,until_at,rubric,model,snapshot,phase,issue,archive_source,archive_digest,archive_content)
             VALUES(${s.id},${e.stamp},${tx.json({ version: rubric.version, criteria: rules, ...(guide ? { guide } : {}) })},${model!},${snapshot!},
               ${issue ? 'review' : 'queued'},${issue},${judgedSource},${artifact?.hash ?? null},${artifact?.bytes ?? null})`;

@@ -26,6 +26,8 @@ test(
       saveSubmission,
       freezeBatch,
       desk,
+      latestReceipt,
+      publicEvent,
     } = await import('../lib/store');
     const { claim, markReview } = await import('../judge/steps');
     const sql = db();
@@ -51,7 +53,9 @@ test(
       await assert.rejects(addTeam('team_0'), /already exists/);
       await assert.rejects(addTeam('Team name'), /underscores/);
       await Promise.all(
-        teams.map((t) => saveSubmission(t.id, 'Original', 'wallet-A', data)),
+        teams.map((t, i) => saveSubmission(t.id, 'Original', 'wallet-A', i === 0
+          ? { ...data, source: 'https://github.com/example/original/commit/' + '0'.repeat(40) }
+          : data)),
       );
       const revision = await saveSubmission(
         teams[0].id,
@@ -64,12 +68,23 @@ test(
       await db()`UPDATE submissions SET submitted_at=submitted_at-interval '12 minutes'`;
       const deadline = new Date(Date.now() - 601000);
       const cutoff = new Date(+deadline + 300000).toISOString();
-      await configure(deadline.toISOString(), draftRubric);
+      // The latest revision was late under the earlier deadline and on time after extension.
+      const earlier = new Date(+deadline - 180000);
+      await configure(earlier.toISOString());
+      assert.equal((await latestReceipt(teams[0].id))?.late, true);
+      await configure(deadline.toISOString());
+      assert.equal((await latestReceipt(teams[0].id))?.late, false);
+      assert.equal((await publicEvent()).commitDeadline, cutoff);
+      const [saved] = await sql`SELECT rubric FROM event_settings WHERE singleton`;
+      assert.deepEqual(saved.rubric, draftRubric);
+      await assert.rejects(configure(new Date(+deadline - 900000).toISOString()), /exclude an accepted receipt/);
+      assert.equal((await publicEvent()).commitDeadline, cutoff);
       const sha = '1'.repeat(40);
       const archive = await readFile(new URL('./fixtures/github-head.zip', import.meta.url));
       const github = t.mock.method(globalThis, 'fetch', async (input: string) => {
         const url = new URL(input);
         if (url.hostname === 'api.github.com') {
+          assert.equal(url.pathname, '/repos/example/project/commits');
           assert.equal(url.searchParams.get('until'), cutoff);
           return Response.json([{ sha, commit: { committer: { date: cutoff } } }]);
         }
@@ -81,7 +96,8 @@ test(
       );
       const [a, b] = await Promise.all([freezeBatch(), freezeBatch()]);
       assert.equal(github.mock.callCount(), 2);
-      const [frozen] = await sql`SELECT archive_content, archive_source FROM judge_runs WHERE submission_id=${revision.id}`;
+      const [frozen] = await sql`SELECT archive_content, archive_source, rubric FROM judge_runs WHERE submission_id=${revision.id}`;
+      assert.deepEqual(frozen.rubric.criteria, [...draftRubric.common, ...draftRubric.focuses['exchange-A']]);
       assert.deepEqual(frozen.archive_content, archive);
       assert.equal(frozen.archive_source, 'https://github.com/example/project/commit/' + sha);
       assert.equal(a.length, 11);

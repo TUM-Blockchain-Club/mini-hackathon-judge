@@ -153,8 +153,15 @@ it('starts eleven independent judges and saves one evidence-backed scorecard per
   );
   await new Promise((resolve) => setTimeout(resolve, 5));
   await db()`UPDATE submissions SET submitted_at=submitted_at-interval '12 minutes'`;
-  await configure(new Date(Date.now() - 601000).toISOString(), officialRubric);
+  const updatedDeadline = new Date(Date.now() - 601000);
+  await configure(updatedDeadline.toISOString());
   const ids = await freezeBatch();
+  const guides = await db()`SELECT rubric->'guide'->>'instructions' AS instructions FROM judge_runs`;
+  expect(guides).toHaveLength(11);
+  for (const { instructions } of guides) {
+    expect(instructions).toContain(updatedDeadline.toISOString());
+    expect(instructions).toContain(new Date(+updatedDeadline + 300000).toISOString());
+  }
   fake.now = Date.now();
   vi.spyOn(Date, 'now').mockImplementation(
     () => virtualTime.getStore()?.now ?? fake.now,

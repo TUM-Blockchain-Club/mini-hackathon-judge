@@ -1,6 +1,5 @@
 import { checkModelAccess } from '@/judge/model';
 import { cloudLauncher, judgeModelId } from '@/judge/cloud';
-import { officialRubric } from '@/judge/official';
 import { importGuide } from '@/judge/guide';
 import { configure, freezeBatch, desk } from '@/lib/store';
 import { sameOrigin, throttle, login, logout, currentAdmin } from '@/lib/auth';
@@ -98,7 +97,7 @@ export async function POST(
           break;
         }
         case 'settings':
-          await configure(String(body.deadline), officialRubric);
+          await configure(String(body.deadline));
           break;
         case 'judge': {
           const launcher = await cloudLauncher();
