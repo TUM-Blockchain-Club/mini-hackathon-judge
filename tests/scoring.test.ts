@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { draftRubric, rubricSchema, scoreCard } from '../judge/rubric';
-import { capture } from '../lib/artifacts';
+import { capture, cutoffArchive } from '../lib/artifacts';
 
 test('the nine focuses and three own-topic options share the 50-point scale and reject duplicate criteria', () => {
   const r = rubricSchema.parse(draftRubric);
@@ -49,4 +49,20 @@ test('accepts only public GitHub repository submissions', async (t) => {
   await assert.rejects(capture(form), /public/);
   download.mock.mockImplementation(async () => new Response('invalid archive'));
   await assert.rejects(capture(form), /archive/);
+});
+
+test('judging excludes commits after the inclusive Berlin cutoff and never falls back to HEAD', async (t) => {
+  const source = 'https://github.com/example/project/commit/' + '1'.repeat(40);
+  const cutoff = new Date('2026-11-28T17:05:00+01:00');
+  let commits: unknown[] = [];
+  const calls = t.mock.method(globalThis, 'fetch', async (input: string) => {
+    assert.equal(new URL(input).searchParams.get('until'), '2026-11-28T16:05:00.000Z');
+    return Response.json(commits);
+  });
+  await assert.rejects(cutoffArchive(source, cutoff), /No eligible commit/);
+  commits = [{ sha: '1'.repeat(40), commit: { committer: { date: '2026-11-28T16:05:01Z' } } }];
+  await assert.rejects(cutoffArchive(source, cutoff), /unverifiable/);
+  commits = [{ sha: '1'.repeat(40), commit: { committer: { date: cutoff.toISOString() } } }];
+  assert.equal(await cutoffArchive(source, cutoff), null);
+  assert.equal(calls.mock.callCount(), 3);
 });

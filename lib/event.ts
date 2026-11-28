@@ -32,6 +32,9 @@ export const focuses = {
     ),
   ),
 };
+export function commitCutoff(deadline: Date | string) {
+  return new Date(new Date(deadline).getTime() + 5 * 60_000);
+}
 export const ownTopicLimit = 200;
 export function focusLabel(focus: string, ownTopic: string | null) {
   const label = focuses[focus];

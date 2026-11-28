@@ -99,7 +99,7 @@ export async function POST(
         await sql`UPDATE judge_runs j SET worker=${owner},phase=CASE WHEN worker IS NULL THEN 'inspecting' ELSE phase END
         FROM submissions s WHERE j.id=${id} AND s.id=j.submission_id AND (j.worker IS NULL OR j.worker=${owner})
         AND j.phase NOT IN ('complete','review') AND j.until_at>clock_timestamp()
-        RETURNING j.until_at,s.filename,s.digest,octet_length(s.content) AS size,(j.rubric ? 'guide' AND s.focus LIKE 'tax-%') AS tax`;
+        RETURNING j.until_at,s.filename,coalesce(j.archive_digest,s.digest) AS digest,octet_length(coalesce(j.archive_content,s.content)) AS size,(j.rubric ? 'guide' AND s.focus LIKE 'tax-%') AS tax`;
       return Response.json(
         row
           ? {
@@ -148,7 +148,7 @@ export async function POST(
         if (!value || !/^([0-9]|1[0-9]|2[0-3])$/.test(value))
           throw new InputError('Invalid artifact chunk.');
         const [piece] =
-          await sql`SELECT substring(content from ${Number(value) * chunkSize + 1}::int for ${chunkSize}::int) AS bytes FROM submissions WHERE id=${row.submission_id}`;
+          await sql`SELECT substring(coalesce(j.archive_content,s.content) from ${Number(value) * chunkSize + 1}::int for ${chunkSize}::int) AS bytes FROM submissions s JOIN judge_runs j ON j.submission_id=s.id WHERE j.id=${id}`;
         return new Response(new Uint8Array(piece.bytes), {
           headers: {
             'Content-Type': 'application/octet-stream',

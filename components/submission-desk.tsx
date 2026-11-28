@@ -186,6 +186,7 @@ export function SubmissionDesk() {
         <Submission
           key={team.id}
           state={desk.state}
+          deadline={desk.deadline}
           teamId={team.id}
           teamName={team.name}
           receipt={desk.receipt}

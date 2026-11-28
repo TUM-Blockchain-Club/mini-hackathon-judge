@@ -8,6 +8,7 @@ export type SubmissionReceipt = {
   title: string;
   description: string | null;
   commitUrl: string | null;
+  judgedCommitUrl?: string | null;
   focus: string;
   ownTopic: string | null;
 };

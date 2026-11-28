@@ -10,7 +10,7 @@ export async function GET(
   if (!z.uuid().safeParse(id).success)
     return new Response(null, { status: 404 });
   const [row] =
-    await db()`SELECT content,filename FROM submissions WHERE id=${id}`;
+    await db()`SELECT coalesce(j.archive_content,s.content) AS content,s.filename FROM submissions s LEFT JOIN judge_runs j ON j.submission_id=s.id WHERE s.id=${id}`;
   if (!row) return new Response(null, { status: 404 });
   const bytes: Buffer = row.content;
   let offset = 0;

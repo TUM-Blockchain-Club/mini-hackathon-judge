@@ -67,7 +67,7 @@ for p in sorted(root.rglob('*')):
 export async function prepare(run: Run) {
   'use step';
   const [s] =
-    await db()`SELECT filename,content FROM submissions s JOIN judge_runs j ON j.submission_id=s.id WHERE j.id=${run.id}`;
+    await db()`SELECT filename,coalesce(j.archive_content,s.content) AS content FROM submissions s JOIN judge_runs j ON j.submission_id=s.id WHERE j.id=${run.id}`;
   const box = await Sandbox.create({
     name: boxName(run),
     source: { type: 'snapshot', snapshotId: run.snapshot },

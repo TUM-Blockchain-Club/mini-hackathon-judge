@@ -1,9 +1,10 @@
 'use client';
 import { useState } from 'react';
-import { tracks, eventDate, focusLabel, ownTopicLimit } from '@/lib/event';
+import { tracks, commitCutoff, eventDate, focusLabel, ownTopicLimit } from '@/lib/event';
 import type { SubmissionReceipt } from '@/lib/types';
 export function Submission({
   state,
+  deadline,
   teamId,
   teamName,
   receipt,
@@ -11,6 +12,7 @@ export function Submission({
   refresh,
 }: {
   state: string;
+  deadline?: string;
   teamId: string;
   teamName: string;
   receipt: SubmissionReceipt | null;
@@ -22,6 +24,7 @@ export function Submission({
     [editing, setEditing] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
+  const cutoff = deadline ? eventDate(commitCutoff(deadline)) : 'the commit cutoff';
   const open = state === 'open' || state === 'late';
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -59,7 +62,9 @@ export function Submission({
           {receipt.title} · {focusLabel(receipt.focus, receipt.ownTopic)}
         </p>
         {receipt.description && <p>{receipt.description}</p>}
-        {receipt.commitUrl && <p><a className="text-link" href={receipt.commitUrl}>View submitted commit</a></p>}
+        {receipt.commitUrl && <p><a className="text-link" href={receipt.commitUrl}>View commit at registration</a></p>}
+        {receipt.judgedCommitUrl && <p><a className="text-link" href={receipt.judgedCommitUrl}>View commit selected for judging</a></p>}
+        {receipt.commitUrl && !receipt.judgedCommitUrl && <p>The judge selects the latest default-branch commit dated at or before {cutoff}.</p>}
         <p>
           Receipt ID <code>{receipt.id}</code>
         </p>
@@ -67,7 +72,7 @@ export function Submission({
           <p>Late submission · 5 points deducted from the overall score.</p>
         )}
         <details>
-          <summary>File fingerprint (SHA-256)</summary>
+          <summary>Registration snapshot fingerprint (SHA-256)</summary>
           <code>{receipt.digest}</code>
         </details>
         {open && (
@@ -112,7 +117,7 @@ export function Submission({
         <ul>
           <li>Make the repository public so the judge can download it without signing in.</li>
           <li>Remove credentials, seed phrases, and personal data before publishing.</li>
-          <li>Push your final work and pitch deck to the default branch before submitting.</li>
+          <li>Push your final work and pitch deck to the default branch by {cutoff}. You can submit the repository link earlier.</li>
           <li>Keep the archive within 24 MiB compressed and 96 MiB unpacked, with at most 2,500 entries.</li>
         </ul>
       </section>

@@ -63,13 +63,37 @@ export async function capture(form: FormData) {
   if (form.has('file') || (form.has('method') && form.get('method') !== 'github'))
     throw new InputError('Submit a public GitHub repository link.');
   const link = String(form.get('repository') ?? '').trim();
+  return downloadArchive(repositoryPath(link), 'HEAD');
+}
+
+function repositoryPath(link: string) {
   const match = /^https:\/\/github\.com\/([A-Za-z0-9-]{1,39})\/([A-Za-z0-9_.-]{1,104})\/?$/i.exec(link);
   const repo = match?.[2].replace(/\.git$/i, '');
   if (!match || !repo || repo === '.' || repo === '..')
     throw new InputError('Use the repository link, such as https://github.com/team/project.');
-  const path = match[1] + '/' + repo;
+  return match[1] + '/' + repo;
+}
+
+export async function cutoffArchive(source: string, cutoff: Date) {
+  const path = repositoryPath(source.split('/commit/')[0]);
+  const params = new URLSearchParams({ until: cutoff.toISOString(), per_page: '1' });
+  const response = await fetch('https://api.github.com/repos/' + path + '/commits?' + params, {
+    cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(12000),
+  });
+  if (!response.ok)
+    throw new InputError('GitHub commit history unavailable (HTTP ' + response.status + ').');
+  const [latest] = await response.json();
+  if (!latest) throw new InputError('No eligible commit on the default branch by the cutoff.');
+  const timestamp = Date.parse(latest.commit?.committer?.date);
+  if (!/^[0-9a-f]{40}$/.test(latest.sha) || !Number.isFinite(timestamp) || timestamp > +cutoff)
+    throw new InputError('GitHub returned an unverifiable commit at the cutoff.');
+  if (source === 'https://github.com/' + path + '/commit/' + latest.sha) return null;
+  return downloadArchive(path, latest.sha);
+}
+
+async function downloadArchive(path: string, ref: string) {
   // GitHub writes the resolved commit SHA into its ZIP archive comment.
-  const response = await fetch('https://codeload.github.com/' + path + '/zip/HEAD', {
+  const response = await fetch('https://codeload.github.com/' + path + '/zip/' + ref, {
     cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(30000),
   });
   if (!response.ok || !response.body)
@@ -89,5 +113,6 @@ export async function capture(form: FormData) {
   }
   const bytes = Buffer.concat(chunks);
   const sha = await archiveCommit(bytes);
+  if (ref !== 'HEAD' && sha !== ref) throw new InputError('GitHub archive commit mismatch.');
   return { bytes, filename: 'submission.zip', source: 'https://github.com/' + path + '/commit/' + sha, hash: digest(bytes) };
 }

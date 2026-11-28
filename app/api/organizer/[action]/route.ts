@@ -8,7 +8,7 @@ import { createAdmin, assignSeat, vote, reviewSubmission } from '@/lib/jury';
 import { db, InputError } from '@/lib/db';
 import { failure } from '@/lib/http';
 import { z } from 'zod';
-export const maxDuration = 60;
+export const maxDuration = 300;
 export async function GET(
   _req: Request,
   ctx: RouteContext<'/api/organizer/[action]'>,

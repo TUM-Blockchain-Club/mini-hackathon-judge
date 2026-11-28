@@ -8,7 +8,7 @@ import { draftRubric } from '../judge/rubric';
 test(
   '11 teams freeze in parallel, revisions lock, duplicate workers exit and expiry preserves evidence',
   { skip: !process.env.TEST_DATABASE_URL },
-  async () => {
+  async (t) => {
     const url = new URL(process.env.TEST_DATABASE_URL!);
     const admin = postgres(url.href, { max: 1 });
     const schema = 'judge_test_' + randomBytes(8).toString('hex');
@@ -57,16 +57,33 @@ test(
         teams[0].id,
         'Final',
         'exchange-A',
-        data,
+        { ...data, filename: 'submission.zip', source: 'https://github.com/example/project/commit/' + '0'.repeat(40) },
       );
       await assert.rejects(freezeBatch());
       await new Promise((resolve) => setTimeout(resolve, 5));
       await db()`UPDATE submissions SET submitted_at=submitted_at-interval '12 minutes'`;
-      await configure(new Date(Date.now() - 601000).toISOString(), draftRubric);
+      const deadline = new Date(Date.now() - 601000);
+      const cutoff = new Date(+deadline + 300000).toISOString();
+      await configure(deadline.toISOString(), draftRubric);
+      const sha = '1'.repeat(40);
+      const archive = await readFile(new URL('./fixtures/github-head.zip', import.meta.url));
+      const github = t.mock.method(globalThis, 'fetch', async (input: string) => {
+        const url = new URL(input);
+        if (url.hostname === 'api.github.com') {
+          assert.equal(url.searchParams.get('until'), cutoff);
+          return Response.json([{ sha, commit: { committer: { date: cutoff } } }]);
+        }
+        assert.equal(url.href, 'https://codeload.github.com/example/project/zip/' + sha);
+        return new Response(new Uint8Array(archive));
+      });
       await assert.rejects(
         saveSubmission(teams[0].id, 'Late', 'wallet-A', data),
       );
       const [a, b] = await Promise.all([freezeBatch(), freezeBatch()]);
+      assert.equal(github.mock.callCount(), 2);
+      const [frozen] = await sql`SELECT archive_content, archive_source FROM judge_runs WHERE submission_id=${revision.id}`;
+      assert.deepEqual(frozen.archive_content, archive);
+      assert.equal(frozen.archive_source, 'https://github.com/example/project/commit/' + sha);
       assert.equal(a.length, 11);
       assert.deepEqual(new Set(a), new Set(b));
       const workers = await Promise.all(

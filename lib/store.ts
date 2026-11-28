@@ -9,8 +9,8 @@ import { standings, type TieDecision } from './standings';
 import type { SubmissionReceipt, TeamRow } from './types';
 import { db, InputError } from './db';
 import { teamHash, newTeamCode } from './auth';
-import { focuses, ownTopicLimit } from './event';
-import { type capture } from './artifacts';
+import { commitCutoff, focuses, ownTopicLimit } from './event';
+import { cutoffArchive, type capture } from './artifacts';
 import { rubricSchema, type Rubric } from '../judge/rubric';
 
 export async function publicEvent() {
@@ -84,8 +84,8 @@ export async function latestReceipt(
   teamId: string,
 ): Promise<SubmissionReceipt | null> {
   const [row] =
-    await db()`SELECT id, submitted_at, digest, late, title, description, source, focus, own_topic
-    FROM submissions WHERE team_id=${teamId} ORDER BY submitted_at DESC, id DESC LIMIT 1`;
+    await db()`SELECT s.id, s.submitted_at, s.digest, s.late, s.title, s.description, s.source, s.focus, s.own_topic, j.archive_source
+    FROM submissions s LEFT JOIN judge_runs j ON j.submission_id=s.id WHERE s.team_id=${teamId} ORDER BY s.submitted_at DESC, s.id DESC LIMIT 1`;
   return row
     ? {
         id: row.id,
@@ -94,6 +94,7 @@ export async function latestReceipt(
         late: row.late,
         title: row.title,
         description: row.description,
+        judgedCommitUrl: row.archive_source,
         commitUrl: row.source.startsWith('https://github.com/') ? row.source : null,
         focus: row.focus,
         ownTopic: row.own_topic,
@@ -192,16 +193,34 @@ export async function freezeBatch(
           409,
         );
       const subs =
-        await tx`SELECT DISTINCT ON(team_id) id,focus FROM submissions WHERE submitted_at <= ${e.deadline}::timestamptz + interval '10 minutes' ORDER BY team_id,submitted_at DESC,id DESC`;
+        await tx`SELECT DISTINCT ON(team_id) id,focus,source FROM submissions WHERE submitted_at <= ${e.deadline}::timestamptz + interval '10 minutes' ORDER BY team_id,submitted_at DESC,id DESC`;
       if (!subs.length)
         throw new InputError('No submissions are available to judge.', 409);
-      for (const s of subs) {
-        const rules = official
-          ? officialRubric.common
-          : [...rubric.common, ...(rubric.focuses[s.focus] ?? [])];
-        const guide = official ? trackGuide(e.guide, s.focus) : undefined;
-        await tx`INSERT INTO judge_runs(submission_id,until_at,rubric,model,snapshot) VALUES(${s.id},${new Date(+e.stamp + 900_000)},${tx.json({ version: rubric.version, criteria: rules, ...(guide ? { guide } : {}) })},${model!},${snapshot!})`;
+      const cutoff = commitCutoff(e.deadline);
+      // Bound simultaneous downloads. Persist each archive before taking the next.
+      const pending = subs.values();
+      async function freezeRepositories() {
+        for (const s of pending) {
+          let artifact = null;
+          let issue: string | null = null;
+          let judgedSource: string | null = null;
+          if (s.source.startsWith('https://github.com/')) {
+            try {
+              artifact = await cutoffArchive(s.source, cutoff);
+              judgedSource = artifact?.source ?? s.source;
+            } catch (err) {
+              issue = err instanceof InputError ? err.message : 'Could not resolve the repository at the commit cutoff.';
+            }
+          }
+          const rules = official ? officialRubric.common : [...rubric.common, ...(rubric.focuses[s.focus] ?? [])];
+          const guide = official ? trackGuide(e.guide, s.focus) : undefined;
+          await tx`INSERT INTO judge_runs(submission_id,until_at,rubric,model,snapshot,phase,issue,archive_source,archive_digest,archive_content)
+            VALUES(${s.id},${e.stamp},${tx.json({ version: rubric.version, criteria: rules, ...(guide ? { guide } : {}) })},${model!},${snapshot!},
+              ${issue ? 'review' : 'queued'},${issue},${judgedSource},${artifact?.hash ?? null},${artifact?.bytes ?? null})`;
+        }
       }
+      await Promise.all(Array.from({ length: Math.min(subs.length, 3) }, freezeRepositories));
+      await tx`UPDATE judge_runs SET until_at=statement_timestamp()+interval '15 minutes' WHERE submission_id IN ${tx(subs.map(s => s.id))}`;
       await tx`UPDATE event_settings SET started_at=${e.stamp},model=${model!},snapshot=${snapshot!} WHERE singleton`;
     }
     const jobs =
@@ -217,7 +236,7 @@ export async function desk(adminId: string | null = null) {
     sql<
       TeamRow[]
     >`SELECT t.id,t.name,t.pitch AS legacy_pitch,b.ballots,b.pitch_sum,b.pitch_means,b.my_ballot,
-      s.id AS submission,s.title,s.description,s.focus,s.own_topic,s.digest,s.source,s.filename,s.submitted_at::text,s.late,
+      s.id AS submission,s.title,s.description,s.focus,s.own_topic,COALESCE(j.archive_digest,s.digest) AS digest,COALESCE(j.archive_source,s.source) AS source,s.filename,s.submitted_at::text,s.late,
       j.id AS run_id,j.phase,j.points,j.issue,j.rubric->'guide'->>'revision' AS guide_revision,j.rubric-'guide' AS rubric,j.scorecard,j.jury_review,coalesce((SELECT jsonb_agg(d.decision ORDER BY d.id) FROM jury_decisions d WHERE d.run_id=j.id),'[]'::jsonb) AS history
       FROM teams t LEFT JOIN LATERAL (SELECT * FROM submissions WHERE team_id=t.id ORDER BY submitted_at DESC,id DESC LIMIT 1) s ON true
       LEFT JOIN judge_runs j ON j.submission_id=s.id

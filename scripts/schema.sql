@@ -21,6 +21,10 @@ CREATE TABLE IF NOT EXISTS judge_runs (
   rubric jsonb NOT NULL, model text NOT NULL, snapshot text NOT NULL, scorecard jsonb,
   points smallint CHECK(points BETWEEN 0 AND 50), issue text
 );
+-- A changed cutoff revision is stored separately from the original receipt.
+ALTER TABLE judge_runs ADD COLUMN IF NOT EXISTS archive_source text;
+ALTER TABLE judge_runs ADD COLUMN IF NOT EXISTS archive_digest text;
+ALTER TABLE judge_runs ADD COLUMN IF NOT EXISTS archive_content bytea;
 CREATE TABLE IF NOT EXISTS observations (
   run_id uuid NOT NULL REFERENCES judge_runs, ref text NOT NULL, command text NOT NULL,
   output text NOT NULL, PRIMARY KEY(run_id, ref)
