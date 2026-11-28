@@ -159,12 +159,9 @@ try {
       links.map((link) => link.getAttribute('href')),
     ),
     [
-      'https://github.com/andi-lightup/lightup-tbc-hackathon',
-      ...['tracks', 'matrices', 'templates', 'data/taxtool-sample'].map(
-        (path) => `https://github.com/andi-lightup/lightup-tbc-hackathon/tree/main/${path}`,
-      ),
       '/docs/participant-materials.zip',
       '/docs/student-ai-tools.pdf',
+      'https://github.com/andi-lightup/lightup-tbc-hackathon',
       'https://lightupkryptos.de/so-testen-wir/',
       'https://youtu.be/Py4EBRDl4zU',
       'https://youtu.be/amlvSdwGT98',
