@@ -29,8 +29,7 @@ export function ParticipantBoard({
           <h2>The LIGHT UP challenge</h2>
           <p>
             Help beginners choose a crypto exchange, wallet or tax tool. Pick
-            one comparison, define a scoring rule, then show how it holds up in
-            a hands-on test.
+            a track, try it for yourself and share what you learn.
           </p>
           <a
             className="board-brief"
