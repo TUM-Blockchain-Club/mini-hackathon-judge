@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { draftRubric, rubricSchema, scoreCard } from '../judge/rubric';
-import { digest, inspectFile, capture } from '../lib/artifacts';
+import { capture } from '../lib/artifacts';
 
 test('the nine focuses and three own-topic options share the 50-point scale and reject duplicate criteria', () => {
   const r = rubricSchema.parse(draftRubric);
@@ -35,19 +35,18 @@ test('scores are computed only from complete bounded rows with recorded evidence
   );
   assert.throws(() => scoreCard(criteria, { rows }, new Set()));
 });
-test('uploads capture the exact bytes and reject unsupported or malformed inputs', async () => {
-  const bytes = Buffer.from('example evidence\n');
-  const f = new FormData();
-  f.set('method', 'file');
-  f.set('file', new File([bytes], 'evidence.csv'));
-  const result = await capture(f);
-  assert.equal(result.hash, digest(bytes));
-  assert.deepEqual(result.bytes, bytes);
-  await assert.rejects(inspectFile('../data.md', bytes));
-  await assert.rejects(inspectFile('result.pdf', bytes));
-  await assert.rejects(inspectFile('data.zip', bytes));
-  await assert.rejects(inspectFile('run.exe', bytes));
-  f.set('method', 'github');
-  f.set('commit', 'https://github.com/a/b/tree/main');
-  await assert.rejects(capture(f));
+test('accepts only public GitHub repository submissions', async (t) => {
+  const form = new FormData();
+  for (const url of ['https://example.com/a/b', 'https://github.com/../b', 'https://github.com/a/b/tree/main']) {
+    form.set('repository', url);
+    await assert.rejects(capture(form), /repository link/);
+  }
+  form.set('repository', 'https://github.com/example/project');
+  form.set('file', new File(['example'], 'proof.txt'));
+  await assert.rejects(capture(form), /repository link/);
+  form.delete('file');
+  const download = t.mock.method(globalThis, 'fetch', async () => new Response(null, { status: 404 }));
+  await assert.rejects(capture(form), /public/);
+  download.mock.mockImplementation(async () => new Response('invalid archive'));
+  await assert.rejects(capture(form), /archive/);
 });

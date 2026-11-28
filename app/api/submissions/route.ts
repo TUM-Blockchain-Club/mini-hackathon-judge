@@ -25,8 +25,8 @@ export async function POST(request: Request) {
     sameOrigin(request);
     const team = await currentTeam();
     if (!team) throw new InputError('Log in to your team to submit.', 401);
-    if (Number(request.headers.get('content-length')) > 3.5 * 1024 * 1024)
-      throw new InputError('Upload limit is 3 MiB.', 413);
+    if (Number(request.headers.get('content-length')) > 16 * 1024)
+      throw new InputError('Submission form is too large.', 413);
     const event = await publicEvent();
     if (event.state !== 'open' && event.state !== 'late')
       throw new InputError('The submission window is closed.', 409);
@@ -37,12 +37,17 @@ export async function POST(request: Request) {
         'Your team session changed. Check your login before submitting.',
         401,
       );
+    const description = data.get('description');
+    if (typeof description !== 'string' || !description.trim() ||
+        description.trim().length > 500 || description.includes('\0'))
+      throw new InputError('Enter a short description of up to 500 characters.');
     const receipt = await saveSubmission(
       team.id,
       String(data.get('title') ?? ''),
       String(data.get('focus') ?? ''),
       await capture(data),
       data.get('ownTopic'),
+      description.trim(),
     );
     return Response.json({ ...receipt, team: team.name }, { status: 201 });
   } catch (err) {

@@ -44,6 +44,7 @@ export async function saveSubmission(
   focus: string,
   data: Awaited<ReturnType<typeof capture>>,
   ownTopicInput?: FormDataEntryValue | null,
+  description: string | null = null,
 ): Promise<SubmissionReceipt> {
   if (!title.trim() || title.length > 100 || !Object.hasOwn(focuses, focus))
     throw new InputError('Enter a project title and select your focus.');
@@ -62,8 +63,8 @@ export async function saveSubmission(
       throw new InputError('Submissions are closed.', 409);
     const [s] =
       await tx`WITH stamp AS MATERIALIZED (SELECT clock_timestamp() AS accepted_at)
-      INSERT INTO submissions(team_id,title,focus,own_topic,source,filename,content,digest,submitted_at,late)
-      SELECT ${team},${title.trim()},${focus},${ownTopic},${data.source},${data.filename},${data.bytes},${data.hash},accepted_at,accepted_at > ${e.deadline} FROM stamp
+      INSERT INTO submissions(team_id,title,description,focus,own_topic,source,filename,content,digest,submitted_at,late)
+      SELECT ${team},${title.trim()},${description},${focus},${ownTopic},${data.source},${data.filename},${data.bytes},${data.hash},accepted_at,accepted_at > ${e.deadline} FROM stamp
       WHERE accepted_at <= ${e.deadline}::timestamptz + interval '10 minutes' RETURNING id,submitted_at,digest,late`;
     if (!s) throw new InputError('The deadline has passed.', 409);
     return {
@@ -72,6 +73,8 @@ export async function saveSubmission(
       digest: s.digest,
       late: s.late,
       title: title.trim(),
+      description,
+      commitUrl: data.source.startsWith('https://github.com/') ? data.source : null,
       focus,
       ownTopic,
     };
@@ -81,7 +84,7 @@ export async function latestReceipt(
   teamId: string,
 ): Promise<SubmissionReceipt | null> {
   const [row] =
-    await db()`SELECT id, submitted_at, digest, late, title, focus, own_topic
+    await db()`SELECT id, submitted_at, digest, late, title, description, source, focus, own_topic
     FROM submissions WHERE team_id=${teamId} ORDER BY submitted_at DESC, id DESC LIMIT 1`;
   return row
     ? {
@@ -90,6 +93,8 @@ export async function latestReceipt(
         digest: row.digest,
         late: row.late,
         title: row.title,
+        description: row.description,
+        commitUrl: row.source.startsWith('https://github.com/') ? row.source : null,
         focus: row.focus,
         ownTopic: row.own_topic,
       }
@@ -212,7 +217,7 @@ export async function desk(adminId: string | null = null) {
     sql<
       TeamRow[]
     >`SELECT t.id,t.name,t.pitch AS legacy_pitch,b.ballots,b.pitch_sum,b.pitch_means,b.my_ballot,
-      s.id AS submission,s.title,s.focus,s.own_topic,s.digest,s.source,s.filename,s.submitted_at::text,s.late,
+      s.id AS submission,s.title,s.description,s.focus,s.own_topic,s.digest,s.source,s.filename,s.submitted_at::text,s.late,
       j.id AS run_id,j.phase,j.points,j.issue,j.rubric->'guide'->>'revision' AS guide_revision,j.rubric-'guide' AS rubric,j.scorecard,j.jury_review,coalesce((SELECT jsonb_agg(d.decision ORDER BY d.id) FROM jury_decisions d WHERE d.run_id=j.id),'[]'::jsonb) AS history
       FROM teams t LEFT JOIN LATERAL (SELECT * FROM submissions WHERE team_id=t.id ORDER BY submitted_at DESC,id DESC LIMIT 1) s ON true
       LEFT JOIN judge_runs j ON j.submission_id=s.id

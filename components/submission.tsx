@@ -17,8 +17,7 @@ export function Submission({
   onSubmitted: (receipt: SubmissionReceipt) => void;
   refresh: () => Promise<void>;
 }) {
-  const [method, setMethod] = useState('github'),
-    [track, setTrack] = useState(''),
+  const [track, setTrack] = useState(''),
     [focus, setFocus] = useState(''),
     [editing, setEditing] = useState(false),
     [busy, setBusy] = useState(false),
@@ -28,7 +27,6 @@ export function Submission({
     e.preventDefault();
     if (!open || busy) return;
     const data = new FormData(e.currentTarget);
-    data.set('method', method);
     data.set('sessionTeam', teamId);
     setBusy(true);
     setError('');
@@ -60,6 +58,8 @@ export function Submission({
         <p>
           {receipt.title} · {focusLabel(receipt.focus, receipt.ownTopic)}
         </p>
+        {receipt.description && <p>{receipt.description}</p>}
+        {receipt.commitUrl && <p><a className="text-link" href={receipt.commitUrl}>View submitted commit</a></p>}
         <p>
           Receipt ID <code>{receipt.id}</code>
         </p>
@@ -87,7 +87,7 @@ export function Submission({
   return (
     <form className="reg-form project-form" onSubmit={submit}>
       <label>
-        Project title
+        Project name
         <input
           name="title"
           required
@@ -95,6 +95,27 @@ export function Submission({
           defaultValue={receipt?.title}
         />
       </label>
+      <label>
+        GitHub repository link
+        <input type="url" name="repository" required maxLength={200}
+          placeholder="https://github.com/team/project"
+          defaultValue={receipt?.commitUrl?.split('/commit/')[0]} />
+      </label>
+      <label>
+        Short description
+        <textarea name="description" rows={3} required maxLength={500}
+          placeholder="What did your team build, and who is it for?"
+          defaultValue={receipt?.description ?? ''} />
+      </label>
+      <section className="submission-requirements" aria-label="Submission requirements">
+        <strong>Submission requirements</strong>
+        <ul>
+          <li>Make the repository public so the judge can download it without signing in.</li>
+          <li>Remove credentials, seed phrases, and personal data before publishing.</li>
+          <li>Push your final work and pitch deck to the default branch before submitting.</li>
+          <li>Keep the archive within 24 MiB compressed and 96 MiB unpacked, with at most 2,500 entries.</li>
+        </ul>
+      </section>
       <div className="submission-choices">
         <label>
           Track
@@ -154,50 +175,6 @@ export function Submission({
           />
         </label>
       )}
-      <fieldset className="submission-method">
-        <legend>Submit as</legend>
-        {[
-          ['github', 'GitHub commit'],
-          ['file', 'File upload'],
-        ].map(([value, label]) => (
-          <label key={value}>
-            <input
-              type="radio"
-              name="method"
-              value={value}
-              checked={method === value}
-              onChange={() => setMethod(value)}
-            />
-            {label}
-          </label>
-        ))}
-      </fieldset>
-      {method === 'github' ? (
-        <label>
-          Commit URL
-          <input
-            type="url"
-            name="commit"
-            placeholder="https://github.com/team/project/commit/…"
-            required
-          />
-          <small>Use the full commit link from a public repository.</small>
-        </label>
-      ) : (
-        <label>
-          Project file
-          <input
-            type="file"
-            name="file"
-            required
-            accept=".zip,.xlsx,.docx,.pdf,.md,.txt,.csv,.json,.py,.js"
-          />
-          <small>ZIP, PDF, spreadsheet, document or text · up to 3 MiB</small>
-        </label>
-      )}
-      <small>
-        Include your pitch deck in the project commit or ZIP you submit.
-      </small>
       {error && (
         <p className="reg-error" role="alert">
           {error}

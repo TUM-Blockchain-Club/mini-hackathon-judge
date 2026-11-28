@@ -6,6 +6,8 @@ export type SubmissionReceipt = {
   digest: string;
   late: boolean;
   title: string;
+  description: string | null;
+  commitUrl: string | null;
   focus: string;
   ownTopic: string | null;
 };
@@ -28,6 +30,7 @@ export type TeamRow = {
   my_ballot: { p1: number; p2: number; p3: number; p4: number } | null;
   submission: string | null;
   title: string | null;
+  description?: string | null;
   focus: string | null;
   own_topic: string | null;
   digest: string | null;

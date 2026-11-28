@@ -32,8 +32,8 @@ function project(focus = 'tax-A', ownTopic?: string) {
   form.set('title', 'Example project');
   form.set('focus', focus);
   if (ownTopic !== undefined) form.set('ownTopic', ownTopic);
-  form.set('method', 'file');
-  form.set('file', new File(['example'], 'notes.md'));
+  form.set('repository', 'https://github.com/example/project');
+  form.set('description', 'Fixture project description');
   return new Request(url, { method: 'POST', body: form });
 }
 
@@ -49,6 +49,11 @@ describe(
     )('next/headers');
 
     before(async () => {
+      const archive = await readFile(new URL('./fixtures/github-head.zip', import.meta.url));
+      mock.method(globalThis, 'fetch', async (url: string) => {
+        assert.equal(url, 'https://codeload.github.com/example/project/zip/HEAD');
+        return new Response(new Uint8Array(archive));
+      });
       const target = new URL(process.env.TEST_DATABASE_URL!);
       setup = postgres(target.href, { max: 1, onnotice: () => {} });
       await setup.unsafe('CREATE SCHEMA ' + schema);
@@ -202,6 +207,8 @@ describe(
       const latest = async () =>
         (await (await submissions.GET()).json()).receipt;
       assert.equal((await latest()).ownTopic, topic);
+      assert.equal((await latest()).description, 'Fixture project description');
+      assert.equal((await latest()).commitUrl, 'https://github.com/example/project/commit/' + '1'.repeat(40));
       const device = jar;
       jar = new Map();
       assert.equal(await latest(), null);

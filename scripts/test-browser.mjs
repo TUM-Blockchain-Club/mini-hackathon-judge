@@ -29,6 +29,7 @@ try {
   server = spawn(
     process.execPath,
     [
+      '--require', require.resolve('./tests/fixtures/github-fetch.cjs'),
       require.resolve('next/dist/bin/next'),
       'start',
       '-p',
@@ -92,7 +93,7 @@ try {
   const directoryUrl = origin + '/api/team/directory';
   assert.equal((await p.request.get(directoryUrl)).status(), 401);
   assert.equal(await p.getByRole('button', { name: 'Other teams' }).count(), 0);
-  assert.equal(await p.getByLabel('Project title').count(), 0);
+  assert.equal(await p.getByLabel('Project name').count(), 0);
   assert.equal(
     await p.getByRole('button', { name: 'Submit project' }).count(),
     0,
@@ -100,7 +101,7 @@ try {
   await p.goto(origin + '/submit#access-code');
   await p.getByRole('heading', { name: 'Team login' }).waitFor();
   assert.equal(await p.getByLabel('Team access code').count(), 0);
-  assert.equal(await p.getByLabel('Project title').count(), 0);
+  assert.equal(await p.getByLabel('Project name').count(), 0);
   await accountNav.getByRole('link', { name: 'Sign up a team' }).click();
   await p.getByRole('heading', { name: 'Register your team' }).waitFor();
   const signupName = p.getByLabel('Team name', { exact: true });
@@ -126,13 +127,9 @@ try {
   await p.getByRole('button', { name: 'Register team' }).click();
   await p.getByRole('button', { name: 'Log out' }).waitFor();
   assert.equal(new URL(p.url()).pathname, '/submit');
-  await p.getByLabel('Project title').fill('Signed-in draft');
-  await p.getByRole('radio', { name: 'File upload' }).check();
-  await p.locator('input[type=file]').setInputFiles({
-    name: 'draft.txt',
-    mimeType: 'text/plain',
-    buffer: Buffer.from('Unsubmitted draft'),
-  });
+  await p.getByLabel('Project name').fill('Signed-in draft');
+  await p.getByLabel('GitHub repository link').fill('https://github.com/example/project');
+  await p.getByLabel('Short description').fill('A wallet comparison for beginners.');
   const nav = p.getByRole('navigation', { name: 'Team portal' });
   await nav.getByRole('link', { name: 'Resources' }).click();
   await p.getByRole('heading', { name: 'Resources', exact: true }).waitFor();
@@ -150,7 +147,7 @@ try {
     ['/docs/participant-materials.zip', '/docs/student-ai-tools.pdf'],
   );
   assert.equal(
-    await p.getByRole('textbox', { name: 'Project title' }).count(),
+    await p.getByRole('textbox', { name: 'Project name' }).count(),
     0,
   );
   await nav.getByRole('link', { name: 'Submission', exact: true }).click();
@@ -160,14 +157,12 @@ try {
   await p.goForward();
   await p.getByRole('heading', { name: 'Project submission' }).waitFor();
   assert.equal(
-    await p.getByLabel('Project title').inputValue(),
+    await p.getByLabel('Project name').inputValue(),
     'Signed-in draft',
   );
   assert.equal(
-    await p
-      .locator('input[type=file]')
-      .evaluate((input) => input.files[0]?.name),
-    'draft.txt',
+    await p.getByLabel('Short description').inputValue(),
+    'A wallet comparison for beginners.',
   );
   assert.equal(await p.getByText('Ada Fern').count(), 0);
   const me = await (await p.request.get(origin + '/api/team/me')).json();
@@ -447,7 +442,7 @@ try {
     401,
   );
   await p.reload();
-  await p.getByLabel('Project title').fill('Wallet comparison');
+  await p.getByLabel('Project name').fill('Wallet comparison');
   await p.getByLabel('Track', { exact: true }).selectOption('wallet');
   const topicField = p.getByLabel('What is your team’s focus?');
   const customTopic = 'Compare wallet recovery instructions for beginners';
@@ -463,12 +458,8 @@ try {
   await p.getByLabel('Focus', { exact: true }).selectOption('wallet-own');
   assert.equal(await topicField.inputValue(), '');
   await topicField.fill(customTopic);
-  await p.getByRole('radio', { name: 'File upload' }).check();
-  await p.locator('input[type=file]').setInputFiles({
-    name: 'observations.md',
-    mimeType: 'text/markdown',
-    buffer: Buffer.from('Wallet usability observation, fixture only.'),
-  });
+  await p.getByLabel('GitHub repository link').fill('https://github.com/example/project');
+  await p.getByLabel('Short description').fill('A wallet comparison for beginners.');
   await p.getByRole('button', { name: 'Submit project' }).click();
   await p.getByText('Project received.').waitFor();
   await p.reload();
@@ -482,16 +473,12 @@ try {
   assert.equal(new URL(p.url()).pathname, '/submit');
   await p.getByRole('button', { name: 'Submit a revision' }).click();
   assert.equal(await topicField.inputValue(), customTopic);
-  await p.getByLabel('Project title').fill('Wallet comparison, revised');
+  await p.getByLabel('Project name').fill('Wallet comparison, revised');
   await p.getByLabel('Track', { exact: true }).selectOption('wallet');
   await p.getByLabel('Focus', { exact: true }).selectOption('wallet-A');
   assert.equal(await topicField.count(), 0);
-  await p.getByRole('radio', { name: 'File upload' }).check();
-  await p.locator('input[type=file]').setInputFiles({
-    name: 'observations.md',
-    mimeType: 'text/markdown',
-    buffer: Buffer.from('Revised observation'),
-  });
+  await p.getByLabel('GitHub repository link').fill('https://github.com/example/project');
+  await p.getByLabel('Short description').fill('A wallet comparison for beginners.');
   await p.getByRole('button', { name: 'Submit project' }).click();
   await p.getByText('Project received.').waitFor();
   const voterPassword = 'ballot-fixture-password';
@@ -596,7 +583,7 @@ try {
   const link = await desk
     .locator('article')
     .filter({ hasText: name })
-    .getByRole('link', { name: 'observations.md' })
+    .getByRole('link', { name: 'submission.zip' })
     .getAttribute('href');
   assert.equal((await desk.request.get(origin + link)).status(), 200);
   assert.equal((await p.request.get(origin + link)).status(), 401);
@@ -624,15 +611,12 @@ try {
   const [inviteTeam] =
     await isolated`INSERT INTO teams(name,code_hash) VALUES('Invite fixture',${inviteHash}) RETURNING id,name`;
   const upload = {
-    method: 'file',
+    repository: 'https://github.com/example/project',
+    description: 'Example late revision',
     title: 'Late revision',
     focus: 'tax-own',
     ownTopic: 'Compare tax rounding methods',
-    file: {
-      name: 'proof.txt',
-      mimeType: 'text/plain',
-      buffer: Buffer.from('revision'),
-    },
+
   };
   const submissionsUrl = origin + '/api/submissions';
   for (const fields of [
@@ -670,15 +654,11 @@ try {
   await p.getByLabel('Team name', { exact: true }).fill(inviteTeam.name);
   await p.locator('input[name=password]').fill(teamPassword);
   await p.getByRole('button', { name: 'Log in' }).click();
-  await p.getByLabel('Project title').fill('Invite submission');
+  await p.getByLabel('Project name').fill('Invite submission');
   await p.getByLabel('Track', { exact: true }).selectOption('wallet');
   await p.getByLabel('Focus', { exact: true }).selectOption('wallet-A');
-  await p.getByRole('radio', { name: 'File upload' }).check();
-  await p.locator('input[type=file]').setInputFiles({
-    name: 'project.txt',
-    mimeType: 'text/plain',
-    buffer: Buffer.from('Legacy team entry'),
-  });
+  await p.getByLabel('GitHub repository link').fill('https://github.com/example/project');
+  await p.getByLabel('Short description').fill('A wallet comparison for beginners.');
   await p.getByRole('button', { name: 'Submit project' }).click();
   await p.getByText('Project received.').waitFor();
   await p.getByText('Invite fixture ·', { exact: false }).waitFor();

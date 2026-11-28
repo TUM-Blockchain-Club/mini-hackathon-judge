@@ -127,7 +127,8 @@
   font-size: 13px;
   color: var(--text);
 }
-.reg-form input {
+.reg-form input,
+.reg-form textarea {
   border: 1px solid #49474a;
   border-radius: 0;
   background: #0c0c0d;
@@ -139,7 +140,11 @@
   font-family: inherit;
   font-size: 15px;
 }
-.reg-form input::placeholder {
+.reg-form textarea {
+  resize: vertical;
+}
+.reg-form input::placeholder,
+.reg-form textarea::placeholder {
   color: #989399;
 }
 .reg-password {
@@ -603,34 +608,15 @@
   color: var(--soft);
   font-size: 13px;
 }
-.submission-method {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 22px;
+.submission-requirements {
+  border-left: 3px solid currentColor;
+  color: #ff9191;
+  padding: 6px 12px;
 }
-.submission-method label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-  cursor: pointer;
-}
-.submission-method input[type='radio'] {
-  width: 16px;
-  min-height: 0;
-  height: 16px;
-  margin: 0;
-  padding: 0;
-  accent-color: var(--brand);
-}
-.project-form input[type='file'] {
-  padding: 7px;
-}
-.project-form input::file-selector-button {
-  font: inherit;
-  padding: 4px 9px;
-  margin-right: 10px;
-  cursor: pointer;
+.submission-requirements ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  line-height: 1.5;
 }
 .submission-send {
   margin-top: 5px;

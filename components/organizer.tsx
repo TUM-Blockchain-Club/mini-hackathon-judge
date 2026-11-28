@@ -354,6 +354,10 @@ export function Organizer({
                 </a>
               </p>
             )}
+            {t.source?.startsWith('https://github.com/') && (
+              <a className="text-link" href={t.source}>View submitted commit</a>
+            )}
+            {t.description && <p>{t.description}</p>}
             {t.issue && <p className="alert">{t.issue}</p>}
             <div className="actions">
               <strong>
