@@ -22,7 +22,10 @@ async function expectStatus(response: Promise<Response>, expected: number) {
 const action = (action: string) => ({ params: Promise.resolve({ action }) });
 const resource = (id: string) => ({ params: Promise.resolve({ id }) });
 const password = 'private-fixture-password-only';
-const members = [{ firstName: 'Example', surname: 'Member' }];
+const members = [
+  { firstName: 'Example', surname: 'Member' },
+  { firstName: 'Second', surname: 'Teammate' },
+];
 const roster = (name: string) => ({ name, password, members });
 function project(focus = 'tax-A', ownTopic?: string) {
   const form = new FormData();
@@ -101,6 +104,7 @@ describe(
       for (const data of [
         roster('two words'),
         { ...roster('Empty'), members: [] },
+        { ...roster('Solo'), members: [members[0]], admin: true },
         { ...roster('Crowded'), members: Array(4).fill(members[0]) },
       ])
         await expectStatus(teams.POST(post(data), action('register')), 400);
@@ -119,7 +123,7 @@ describe(
       const directory = await teams.GET(get(), action('directory'));
       assert.equal(directory.status, 200);
       assert.deepEqual(await directory.json(), [
-        { name: 'Viewers', members, memberCount: 1 },
+        { name: 'Viewers', members, memberCount: 2 },
       ]);
     });
 

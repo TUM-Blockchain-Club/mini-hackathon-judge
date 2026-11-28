@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   try {
     sameOrigin(req);
     if (!(await signedIn())) throw new InputError('Admin login required.', 401);
-    const { id } = await saveRoster(await req.json());
+    const { id } = await saveRoster(await req.json(), { admin: true });
     return Response.json({ id }, { status: 201 });
   } catch (err) {
     return failure(err);

@@ -115,8 +115,10 @@ try {
     ['Ada', 'Fern'],
     ['Ren', 'Weiss'],
   ];
+  assert.equal(await p.getByLabel('First name', { exact: true }).count(), 2);
+  assert.equal(await p.getByRole('button', { name: /Remove member/ }).count(), 0);
   for (const [i, [first, last]] of names.entries()) {
-    if (i) await p.getByRole('button', { name: 'Add member' }).click();
+    if (i === 2) await p.getByRole('button', { name: 'Add member' }).click();
     await p.getByLabel('First name', { exact: true }).nth(i).fill(first);
     await p.getByLabel('Surname', { exact: true }).nth(i).fill(last);
   }
@@ -212,7 +214,7 @@ try {
   await p.getByRole('button', { name: 'Other teams' }).click();
   await p.getByText('No other teams have registered yet.').waitFor();
   await p.getByRole('button', { name: 'Other teams' }).click();
-  for (const members of [[], [...me.members, me.members[0]]]) {
+  for (const members of [[], [me.members[0]], [...me.members, me.members[0]]]) {
     assert.equal(
       (
         await p.request.post(origin + '/api/team/register', {

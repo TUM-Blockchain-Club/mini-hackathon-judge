@@ -172,7 +172,7 @@ export function AdminDesk() {
             <>
               <h2>Create team</h2>
               <p className="reg-intro">
-                Set a password to share with the team.
+                Add one to three members and set a shared team password.
               </p>
               <RosterForm
                 mode="create"

@@ -64,14 +64,15 @@ export function RosterForm({
   onCancel?: () => void;
 }) {
   const group = useId();
+  const minimumMembers = mode === 'signup' ? 2 : 1;
   const [name, setName] = useState(team?.name ?? '');
-  const [members, setMembers] = useState(() =>
-      (team?.members.length ? team.members : [emptyMember()]).map((m, i) => ({
-        ...m,
-        key: i,
-      })),
-    ),
-    [nextKey, setNextKey] = useState(members.length);
+  const [members, setMembers] = useState(() => {
+    const initial = team?.members.length
+      ? team.members
+      : Array.from({ length: minimumMembers }, emptyMember);
+    return initial.map((member, key) => ({ ...member, key }));
+  });
+  const [nextKey, setNextKey] = useState(members.length);
   const [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
   function add() {
@@ -81,7 +82,7 @@ export function RosterForm({
     }
   }
   function remove(key: number) {
-    if (busy || members.length <= 1) return;
+    if (busy || members.length <= minimumMembers) return;
     const saved = team?.members[key];
     if (saved) {
       const person = [saved.firstName, saved.surname].join(' ');
@@ -186,7 +187,7 @@ export function RosterForm({
                   onChange={(e) => change(m.key, 'surname', e.target.value)}
                 />
               </label>
-              {members.length > 1 && (
+              {members.length > minimumMembers && (
                 <button
                   type="button"
                   className="reg-remove"

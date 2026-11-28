@@ -44,7 +44,7 @@ export async function POST(
     const body = await req.json();
     if (action === 'register') {
       const token = randomBytes(32).toString('hex');
-      await saveRoster(body, { token });
+      await saveRoster(body, { signupToken: token });
       await setTeamCookie(token);
       return Response.json({ ok: true }, { status: 201 });
     }

@@ -167,8 +167,9 @@ export function SubmissionDesk() {
         <section className="submission-auth-form" id="signup">
           <h2>Register your team</h2>
           <p className="reg-intro">
-            Register one to three members. Everyone signs in with the same team
-            name and password.
+            Register two or three members. Each teammate can sign in on their own
+            device with the shared team name and password. Ask an admin to
+            register a solo team or change your roster after signup.
           </p>
           <RosterForm mode="signup" onSaved={identified} />
         </section>

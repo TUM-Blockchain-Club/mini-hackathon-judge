@@ -13,7 +13,7 @@ export async function PATCH(
     const { id } = await params;
     if (!z.uuid().safeParse(id).success)
       throw new InputError('Team not found.', 404);
-    await saveRoster(await req.json(), { teamId: id });
+    await saveRoster(await req.json(), { admin: true, teamId: id });
     return Response.json({ id });
   } catch (err) {
     return failure(err);

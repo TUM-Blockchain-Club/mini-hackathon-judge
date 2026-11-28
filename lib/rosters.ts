@@ -6,6 +6,7 @@ import { newTeamCode, teamHash } from './auth';
 import { digest } from './artifacts';
 import {
   createInput,
+  signupInput,
   teamNameInput,
   editInput,
   loginInput,
@@ -42,9 +43,11 @@ export async function otherTeams(teamId: string): Promise<DirectoryTeam[]> {
 
 export async function saveRoster(
   input: unknown,
-  { teamId, token }: { teamId?: string; token?: string } = {},
+  options: { signupToken: string } | { admin: true; teamId?: string },
 ) {
-  const data = teamId ? parse(editInput, input) : parse(createInput, input);
+  const teamId = 'admin' in options ? options.teamId : undefined;
+  const creationSchema = 'admin' in options ? createInput : signupInput;
+  const data = teamId ? parse(editInput, input) : parse(creationSchema, input);
   const hash = data.password ? await hashPassword(data.password) : null;
   return db().begin(async (tx) => {
     // Serialize competing names including case variants and legacy invite-only teams.
@@ -87,8 +90,8 @@ export async function saveRoster(
     }
     if (hash)
       await tx`INSERT INTO team_profiles(team_id,members,password_hash) VALUES(${id},${tx.json(data.members)},${hash})`;
-    if (token)
-      await tx`INSERT INTO team_sessions(token_hash,team_id,expires_at) VALUES(${digest(token)},${id},now()+interval '7 days')`;
+    if ('signupToken' in options)
+      await tx`INSERT INTO team_sessions(token_hash,team_id,expires_at) VALUES(${digest(options.signupToken)},${id},now()+interval '7 days')`;
     return { id };
   });
 }

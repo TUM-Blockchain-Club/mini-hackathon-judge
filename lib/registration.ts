@@ -23,6 +23,12 @@ const password = z
   .min(10, 'Use at least 10 characters for the team password.')
   .max(128, 'Use up to 128 characters for the password.');
 export const createInput = rosterInput.extend({ password });
+export const signupInput = createInput.extend({
+  members: rosterInput.shape.members.min(
+    2,
+    'Register at least two members. Ask an admin to create a one-person team.',
+  ),
+});
 export const editInput = rosterInput.extend({
   // Existing registrations may predate the handle format. Validate changes under the row lock.
   name: existingName,
