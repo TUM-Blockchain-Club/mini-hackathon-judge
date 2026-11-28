@@ -123,20 +123,11 @@ export function ParticipantBoard({
           </p>
           <ul>
             <li>
-              Open with <strong>one result</strong> from your test.
+              The first <strong>five minutes</strong> are yours to present.
+              We’ll save questions for the end.
             </li>
-            <li>
-              Show the evidence and explain how LIGHT UP can use the result.
-            </li>
-            <li>
-              Leave time for questions within your <strong>five minutes</strong>
-              .
-            </li>
-            <li>
-              All tracks share one ranking, with{' '}
-              <strong>50 points for the submission</strong> and{' '}
-              <strong>50 for the jury pitch</strong>.
-            </li>
+            <li>Show us what you tried, what you found and how LIGHT UP could use it. One example is plenty.</li>
+            <li>After your demo, we’ll have a <strong>short Q&amp;A</strong>.</li>
           </ul>
         </section>
       </div>
