@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { tracks, eventDate, focusLabel, ownTopicLimit } from '@/lib/event';
+import { tracks, eventDate, focusLabel, ownTopicLimit, projectDescriptionLimit } from '@/lib/event';
 import type { SubmissionReceipt } from '@/lib/types';
 export function Submission({
   state,
@@ -22,6 +22,7 @@ export function Submission({
   const [track, setTrack] = useState(''),
     [focus, setFocus] = useState(''),
     [editing, setEditing] = useState(false),
+    [description, setDescription] = useState(receipt?.description ?? ''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
   const cutoff = commitDeadline ? eventDate(commitDeadline) : 'the commit cutoff';
@@ -78,6 +79,7 @@ export function Submission({
             onClick={() => {
               setTrack(receipt.focus.split('-')[0]);
               setFocus(receipt.focus);
+              setDescription(receipt.description ?? '');
               setEditing(true);
             }}
           >
@@ -104,10 +106,12 @@ export function Submission({
           defaultValue={receipt?.commitUrl?.split('/commit/')[0]} />
       </label>
       <label>
-        Short description
-        <textarea name="description" rows={3} required maxLength={500}
+        <span id="project-description-label">Short description</span>
+        <textarea name="description" rows={3} required maxLength={projectDescriptionLimit}
+          aria-labelledby="project-description-label" aria-describedby="project-description-count"
           placeholder="What did your team build, and who is it for?"
-          defaultValue={receipt?.description ?? ''} />
+          value={description} onChange={(e) => setDescription(e.target.value)} />
+        <small id="project-description-count">{description.length} / {projectDescriptionLimit} characters</small>
       </label>
       <section className="submission-requirements" aria-label="Submission requirements">
         <strong>Submission requirements</strong>

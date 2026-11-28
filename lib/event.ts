@@ -1,3 +1,4 @@
+export const projectDescriptionLimit = 500;
 export const tracks = [
   {
     id: 'exchange',

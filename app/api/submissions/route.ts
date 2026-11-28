@@ -1,3 +1,4 @@
+import { projectDescriptionLimit } from '@/lib/event';
 import { currentTeam } from '@/lib/rosters';
 import { capture } from '@/lib/artifacts';
 import { latestReceipt, publicEvent, saveSubmission } from '@/lib/store';
@@ -39,8 +40,8 @@ export async function POST(request: Request) {
       );
     const description = data.get('description');
     if (typeof description !== 'string' || !description.trim() ||
-        description.trim().length > 500 || description.includes('\0'))
-      throw new InputError('Enter a short description of up to 500 characters.');
+        description.length > projectDescriptionLimit || description.includes('\0'))
+      throw new InputError(`Enter a short description of up to ${projectDescriptionLimit} characters.`);
     const receipt = await saveSubmission(
       team.id,
       String(data.get('title') ?? ''),

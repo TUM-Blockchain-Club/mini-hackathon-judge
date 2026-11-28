@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, ArrowUpRight, Clock3 } from 'lucide-react';
-import { eventDate, tracks } from '@/lib/event';
+import { eventDate, projectDescriptionLimit, tracks } from '@/lib/event';
 import type { SubmissionReceipt } from '@/lib/types';
 
 const questions = {
@@ -90,7 +90,7 @@ export function ParticipantBoard({
           <h2>What to submit</h2>
           <p>Only one team member submits the project.</p>
           <ul>
-            <li>Project name and description (up to 500 characters)</li>
+            <li>Project name and description (up to {projectDescriptionLimit} characters)</li>
             <li>Track and focus</li>
             <li>Public GitHub repository URL</li>
             <li>Pitch deck on the default branch</li>
