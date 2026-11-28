@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { officialCriteria } from '@/judge/official';
-import { jobName, verifyTicket, judgeModel } from '@/judge/cloud';
+import { jobName, verifyTicket, judgeModelId } from '@/judge/cloud';
 import {
   planInspection,
   grade,
@@ -51,7 +51,7 @@ export async function POST(
       const run: Run = {
         id,
         owner,
-        model: judgeModel(),
+        model: judgeModelId,
         until: Date.now() + 450_000,
         snapshot: 'probe',
         focus: 'fixture',

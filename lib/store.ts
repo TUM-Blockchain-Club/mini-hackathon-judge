@@ -166,7 +166,7 @@ export async function freezeBatch(
         );
       if (!model || !snapshot || !process.env.GEMINI_API_KEY?.trim())
         throw new InputError(
-          'Configure the Gemini API key, model and sandbox before starting.',
+          'Configure the OpenAI project key in GEMINI_API_KEY and the sandbox before starting.',
           503,
         );
       if (!e.guide && target?.approvedGuide) {

@@ -119,9 +119,9 @@ beforeAll(async () => {
   await owner.unsafe('CREATE SCHEMA ' + schema);
   url.searchParams.set('options', '-c search_path=' + schema);
   process.env.DATABASE_URL = url.href;
-  process.env.JUDGE_MODEL = 'fixture/model';
+  process.env.JUDGE_MODEL = 'gpt-6-luna';
   process.env.JUDGE_SNAPSHOT_ID = 'snap-fixture';
-  process.env.GEMINI_API_KEY = 'fixture';
+  process.env.GEMINI_API_KEY = 'sk-test-rehearsal';
   await db().unsafe(
     await readFile(new URL('../scripts/schema.sql', import.meta.url), 'utf8'),
   );

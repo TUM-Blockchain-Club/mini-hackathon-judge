@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { checkModelAccess } from '@/judge/model';
-import { cloudLauncher, judgeModel } from '@/judge/cloud';
+import { cloudLauncher, judgeModelId } from '@/judge/cloud';
 import { db, InputError } from '@/lib/db';
 import { failure } from '@/lib/http';
 
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       throw new InputError('Invalid cloud operator identity.', 403);
     const url = new URL(request.url);
     if (url.searchParams.get('check') === 'model') {
-      const model = judgeModel();
+      const model = judgeModelId;
       await checkModelAccess(model);
       return Response.json({ model, available: true });
     }
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       event.guide_ready || (await launcher.approvedGuide()),
     );
     const operation = await launcher.start(randomUUID(), true);
-    return Response.json({ operation, guideReady, model: judgeModel() });
+    return Response.json({ operation, guideReady, model: judgeModelId });
   } catch (error) {
     return failure(error);
   }

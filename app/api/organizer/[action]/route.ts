@@ -1,5 +1,5 @@
 import { checkModelAccess } from '@/judge/model';
-import { cloudLauncher, judgeModel } from '@/judge/cloud';
+import { cloudLauncher, judgeModelId } from '@/judge/cloud';
 import { officialRubric } from '@/judge/official';
 import { importGuide } from '@/judge/guide';
 import { configure, freezeBatch, desk } from '@/lib/store';
@@ -104,7 +104,7 @@ export async function POST(
           const launcher = await cloudLauncher();
           const [event] =
             await db()`SELECT guide IS NULL AS needs_guide,started_at FROM event_settings WHERE singleton`;
-          const model = judgeModel();
+          const model = judgeModelId;
           const approvedGuide =
             event.needs_guide && !event.started_at
               ? await launcher.approvedGuide()

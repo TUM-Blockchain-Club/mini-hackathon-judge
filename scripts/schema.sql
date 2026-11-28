@@ -75,6 +75,14 @@ CREATE TABLE IF NOT EXISTS organizer_sessions (
   token_hash text PRIMARY KEY, expires_at timestamptz NOT NULL
 );
 
+-- NULL settlement holds the maximum charge if the API outcome is unknown.
+CREATE TABLE IF NOT EXISTS judge_token_charges (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), run_id uuid,
+  ceiling_micros integer NOT NULL CHECK (ceiling_micros > 0),
+  settled_micros integer CHECK (settled_micros BETWEEN 0 AND ceiling_micros),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS judge_schema_migrations (
   digest text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now()
 );
@@ -88,7 +96,7 @@ DECLARE
   event_schema text := current_schema();
   tables text[] := ARRAY['event_settings','teams','submissions','judge_runs',
     'observations','login_attempts','team_profiles','team_sessions','admin_accounts',
-    'admin_sessions','organizer_sessions','pitch_ballots','podium_decisions','jury_decisions','judge_schema_migrations'];
+    'admin_sessions','organizer_sessions','pitch_ballots','podium_decisions','jury_decisions','judge_schema_migrations','judge_token_charges'];
   decision_sequence regclass := pg_get_serial_sequence('jury_decisions','id')::regclass;
 BEGIN
   FOREACH table_name IN ARRAY tables LOOP

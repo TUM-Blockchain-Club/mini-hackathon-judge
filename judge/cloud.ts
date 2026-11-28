@@ -8,8 +8,7 @@ export const jobName = 'repo-judge-v1';
 const jobUrl = `https://run.googleapis.com/v2/projects/${project}/locations/europe-west1/jobs/${jobName}`;
 const audience =
   '//iam.googleapis.com/projects/60883640786/locations/global/workloadIdentityPools/vercel/providers/production';
-export const judgeModel = () =>
-  process.env.JUDGE_MODEL || 'gemini-3.5-flash-lite';
+export { judgeModelId } from './openai';
 
 function signature(id: string, expiry: string, scope: string) {
   const key = process.env.ORGANIZER_PASSWORD;

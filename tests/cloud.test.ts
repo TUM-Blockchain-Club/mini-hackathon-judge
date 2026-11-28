@@ -18,15 +18,12 @@ test('worker tickets are bound to the submission, purpose and expiry', () => {
   );
 });
 
-test('missing Gemini credentials stop judging before a model request', async () => {
+test('missing OpenAI credentials stop judging before a model request', async () => {
   const { checkModelAccess } = await import('../judge/model');
   const prior = process.env.GEMINI_API_KEY;
   delete process.env.GEMINI_API_KEY;
   try {
-    await assert.rejects(
-      checkModelAccess('gemini-fixture'),
-      /Set GEMINI_API_KEY/,
-    );
+    await assert.rejects(checkModelAccess('gpt-6-luna'), /Set GEMINI_API_KEY/);
   } finally {
     if (prior !== undefined) process.env.GEMINI_API_KEY = prior;
   }
@@ -70,7 +67,7 @@ test(
         },
       ];
       const [run] =
-        await sql`INSERT INTO judge_runs(submission_id,until_at,rubric,model,snapshot) VALUES(${sub.id},now()+interval '15 minutes',${sql.json({ criteria })},'fixture','image') RETURNING id`;
+        await sql`INSERT INTO judge_runs(submission_id,until_at,rubric,model,snapshot) VALUES(${sub.id},now()+interval '15 minutes',${sql.json({ criteria })},'gpt-6-luna','image') RETURNING id`;
       const id = String(run.id),
         token = issueTicket(id);
       const call = (
@@ -113,21 +110,25 @@ test(
         (await call('observe', 'one', { ...obs, ref: 'V01-1' })).status,
         409,
       );
-      process.env.GEMINI_API_KEY = 'fixture-google-key';
+      process.env.GEMINI_API_KEY = 'sk-test-openai-project';
+      let interrupt = false;
+      let requests = 0;
       context.mock.method(
         globalThis,
         'fetch',
         async (input: RequestInfo | URL, init?: RequestInit) => {
           const request = new Request(input, init);
+          assert.equal(new URL(request.url).origin, 'https://api.openai.com');
           assert.equal(
-            new URL(request.url).origin,
-            'https://generativelanguage.googleapis.com',
+            request.headers.get('authorization'),
+            'Bearer sk-test-openai-project',
           );
-          assert.equal(
-            request.headers.get('x-goog-api-key'),
-            'fixture-google-key',
-          );
+          requests++;
+          if (interrupt) throw new Error('Simulated connection loss');
           const body = await request.text();
+          assert.equal(new URL(request.url).pathname, '/v1/responses');
+          assert.equal(JSON.parse(body).model, 'gpt-6-luna');
+          assert.equal(JSON.parse(body).store, false);
           assert.ok(body.includes(topic));
           const output = body.includes('priorityCriterion')
             ? { commands: ['cat file.txt'], covered: true }
@@ -142,20 +143,25 @@ test(
                 ],
               };
           return Response.json({
-            candidates: [
+            id: 'resp_fixture',
+            created_at: Math.floor(Date.now() / 1000),
+            model: 'gpt-6-luna',
+            status: 'completed',
+            output: [
               {
-                content: {
-                  role: 'model',
-                  parts: [{ text: JSON.stringify(output) }],
-                },
-                finishReason: 'STOP',
+                type: 'message',
+                role: 'assistant',
+                id: 'msg_fixture',
+                content: [
+                  {
+                    type: 'output_text',
+                    text: JSON.stringify(output),
+                    annotations: [],
+                  },
+                ],
               },
             ],
-            usageMetadata: {
-              promptTokenCount: 1,
-              candidatesTokenCount: 1,
-              totalTokenCount: 2,
-            },
+            usage: { input_tokens: 80, output_tokens: 20, total_tokens: 100 },
           });
         },
       );
@@ -180,6 +186,29 @@ test(
         409,
       );
       assert.equal((await call('artifact', 'one', {}, '?part=0')).status, 409);
+      const billed =
+        await sql`SELECT settled_micros FROM judge_token_charges WHERE run_id=${id}`;
+      assert.deepEqual(
+        [...billed],
+        [{ settled_micros: 30 }, { settled_micros: 30 }],
+      );
+      assert.equal(requests, 2);
+      await sql`INSERT INTO judge_token_charges(ceiling_micros, settled_micros) VALUES(32500000,32500000)`;
+      interrupt = true;
+      const { checkModelAccess } = await import('../judge/model');
+      const competing = await Promise.allSettled([
+        checkModelAccess('gpt-6-luna'),
+        checkModelAccess('gpt-6-luna'),
+      ]);
+      assert.ok(competing.every((result) => result.status === 'rejected'));
+      assert.equal(
+        requests,
+        3,
+        'only one request fits and an uncertain charge stays reserved',
+      );
+      const [remaining] =
+        await sql`SELECT sum(coalesce(settled_micros, ceiling_micros))::int AS used FROM judge_token_charges`;
+      assert.ok(remaining.used > 32500000 && remaining.used <= 33000000);
     } finally {
       await sql.end();
       await admin.unsafe('DROP SCHEMA ' + schema + ' CASCADE');
