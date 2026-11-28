@@ -3,7 +3,7 @@ import { Sandbox } from '@vercel/sandbox';
 import { generateText, tool, stepCountIs } from 'ai';
 import { z } from 'zod';
 import { db } from '../lib/db';
-import { grade, system, timeLeft, type Run } from './model';
+import { geminiModel, grade, system, timeLeft, type Run } from './model';
 export type { Run } from './model';
 export async function claim(id: string, owner: string): Promise<Run | null> {
   'use step';
@@ -143,7 +143,7 @@ async function collectEvidence(
   });
   let calls = 0;
   const result = await generateText({
-    model: run.model,
+    model: geminiModel(run.model),
     system,
     maxRetries: 1,
     maxOutputTokens: 1100,

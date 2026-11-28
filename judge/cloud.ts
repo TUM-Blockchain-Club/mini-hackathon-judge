@@ -9,7 +9,7 @@ const jobUrl = `https://run.googleapis.com/v2/projects/${project}/locations/euro
 const audience =
   '//iam.googleapis.com/projects/60883640786/locations/global/workloadIdentityPools/vercel/providers/production';
 export const judgeModel = () =>
-  process.env.JUDGE_MODEL || 'google/gemini-2.5-flash';
+  process.env.JUDGE_MODEL || 'gemini-3.5-flash-lite';
 
 function signature(id: string, expiry: string, scope: string) {
   const key = process.env.ORGANIZER_PASSWORD;

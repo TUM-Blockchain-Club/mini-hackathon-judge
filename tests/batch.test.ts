@@ -17,7 +17,7 @@ test(
     process.env.DATABASE_URL = url.href;
     process.env.JUDGE_MODEL = 'rehearsal/model';
     process.env.JUDGE_SNAPSHOT_ID = 'rehearsal-snapshot';
-    process.env.AI_GATEWAY_API_KEY = 'test';
+    process.env.GEMINI_API_KEY = 'test';
     const { db } = await import('../lib/db');
     const {
       addTeam,

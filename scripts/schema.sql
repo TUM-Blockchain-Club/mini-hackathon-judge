@@ -75,6 +75,10 @@ CREATE TABLE IF NOT EXISTS organizer_sessions (
   token_hash text PRIMARY KEY, expires_at timestamptz NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS judge_schema_migrations (
+  digest text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- These tables are private to the server connection, which owns them. Browser
 -- sessions use the application's authenticated routes, including for the directory.
 DO $$
@@ -84,7 +88,7 @@ DECLARE
   event_schema text := current_schema();
   tables text[] := ARRAY['event_settings','teams','submissions','judge_runs',
     'observations','login_attempts','team_profiles','team_sessions','admin_accounts',
-    'admin_sessions','organizer_sessions','pitch_ballots','podium_decisions','jury_decisions'];
+    'admin_sessions','organizer_sessions','pitch_ballots','podium_decisions','jury_decisions','judge_schema_migrations'];
   decision_sequence regclass := pg_get_serial_sequence('jury_decisions','id')::regclass;
 BEGIN
   FOREACH table_name IN ARRAY tables LOOP

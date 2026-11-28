@@ -1,4 +1,5 @@
-import { generateText, Output } from 'ai';
+import { APICallError, generateText, Output } from 'ai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { InputError } from '../lib/db';
 import { z } from 'zod';
 import { cardSchema, scoreCard, type Criterion } from './rubric';
@@ -24,25 +25,34 @@ export function timeLeft(until: number, cap: number) {
   return left;
 }
 
+export function geminiModel(model: string) {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey)
+    throw new InputError(
+      'Set GEMINI_API_KEY in the Vercel Production environment and redeploy before starting judging.',
+      503,
+    );
+  // Earlier frozen batches used the Gateway's google/ prefix.
+  return createGoogleGenerativeAI({ apiKey })(model.replace(/^google\//, ''));
+}
+
 // A live model request runs before the batch clock starts. It carries no event data.
 export async function checkModelAccess(model: string) {
+  const provider = geminiModel(model);
   try {
     await generateText({
-      model,
-      providerOptions: { gateway: { zeroDataRetention: true } },
+      model: provider,
       prompt: 'Reply OK.',
       maxRetries: 0,
       maxOutputTokens: 32,
       abortSignal: AbortSignal.timeout(15_000),
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : '';
-    const detail = message
-      .split('\n')[0]
-      .replace(/(?:Bearer\s+|(?:sk-|eyJ))[A-Za-z0-9._-]+/gi, '[redacted]')
-      .slice(0, 360);
+    const status = APICallError.isInstance(error)
+      ? error.statusCode
+      : undefined;
     throw new InputError(
-      'AI Gateway could not start ' + model + '. ' + detail,
+      `Google Gemini could not start ${model}${status ? ' (HTTP ' + status + ')' : ''}. Check the API key, model access and quota in Google AI Studio.`,
       503,
     );
   }
@@ -68,8 +78,7 @@ export async function planInspection(
     covered: z.boolean(),
   });
   const { output } = await generateText({
-    model: run.model,
-    providerOptions: { gateway: { zeroDataRetention: true } },
+    model: geminiModel(run.model),
     system,
     maxRetries: 2,
     maxOutputTokens: 2400,
@@ -134,8 +143,7 @@ export async function grade(run: Run, evidence: Evidence[]) {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const { output } = await generateText({
-        model: run.model,
-        providerOptions: { gateway: { zeroDataRetention: true } },
+        model: geminiModel(run.model),
         system,
         maxRetries: 2,
         maxOutputTokens: run.guide ? 11500 : 6000,

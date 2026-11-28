@@ -121,7 +121,7 @@ beforeAll(async () => {
   process.env.DATABASE_URL = url.href;
   process.env.JUDGE_MODEL = 'fixture/model';
   process.env.JUDGE_SNAPSHOT_ID = 'snap-fixture';
-  process.env.AI_GATEWAY_API_KEY = 'fixture';
+  process.env.GEMINI_API_KEY = 'fixture';
   await db().unsafe(
     await readFile(new URL('../scripts/schema.sql', import.meta.url), 'utf8'),
   );

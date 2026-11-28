@@ -164,15 +164,9 @@ export async function freezeBatch(
           'Judging opens after the late submission window.',
           409,
         );
-      if (
-        !model ||
-        !snapshot ||
-        (!process.env.VERCEL &&
-          !process.env.AI_GATEWAY_API_KEY &&
-          !process.env.VERCEL_OIDC_TOKEN)
-      )
+      if (!model || !snapshot || !process.env.GEMINI_API_KEY?.trim())
         throw new InputError(
-          'Configure the judge model, gateway access and sandbox snapshot before starting.',
+          'Configure the Gemini API key, model and sandbox before starting.',
           503,
         );
       if (!e.guide && target?.approvedGuide) {

@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import postgres from 'postgres';
-import { MockLanguageModelV3, MockProviderV3 } from 'ai/test';
 import { issueTicket, verifyTicket, jobName } from '../judge/cloud';
 
 process.env.ORGANIZER_PASSWORD = 'test-only-secret-for-the-cloud-callback';
@@ -19,10 +18,24 @@ test('worker tickets are bound to the submission, purpose and expiry', () => {
   );
 });
 
+test('missing Gemini credentials stop judging before a model request', async () => {
+  const { checkModelAccess } = await import('../judge/model');
+  const prior = process.env.GEMINI_API_KEY;
+  delete process.env.GEMINI_API_KEY;
+  try {
+    await assert.rejects(
+      checkModelAccess('gemini-fixture'),
+      /Set GEMINI_API_KEY/,
+    );
+  } finally {
+    if (prior !== undefined) process.env.GEMINI_API_KEY = prior;
+  }
+});
+
 test(
   'cloud worker claims, chunked downloads and evidence are isolated across runs',
   { skip: !process.env.TEST_DATABASE_URL },
-  async () => {
+  async (context) => {
     const url = new URL(process.env.TEST_DATABASE_URL!);
     const admin = postgres(url.href, { max: 1, onnotice: () => {} });
     const schema = 'cloud_test_' + randomUUID().replaceAll('-', '');
@@ -100,13 +113,23 @@ test(
         (await call('observe', 'one', { ...obs, ref: 'V01-1' })).status,
         409,
       );
-      const model = new MockLanguageModelV3({
-        doGenerate: async (options) => {
-          assert.ok(JSON.stringify(options.prompt).includes(topic));
-          const planning = JSON.stringify(options.prompt).includes(
-            'priorityCriterion',
+      process.env.GEMINI_API_KEY = 'fixture-google-key';
+      context.mock.method(
+        globalThis,
+        'fetch',
+        async (input: RequestInfo | URL, init?: RequestInit) => {
+          const request = new Request(input, init);
+          assert.equal(
+            new URL(request.url).origin,
+            'https://generativelanguage.googleapis.com',
           );
-          const output = planning
+          assert.equal(
+            request.headers.get('x-goog-api-key'),
+            'fixture-google-key',
+          );
+          const body = await request.text();
+          assert.ok(body.includes(topic));
+          const output = body.includes('priorityCriterion')
             ? { commands: ['cat file.txt'], covered: true }
             : {
                 rows: [
@@ -118,26 +141,24 @@ test(
                   },
                 ],
               };
-          return {
-            content: [{ type: 'text', text: JSON.stringify(output) }],
-            finishReason: { unified: 'stop', raw: 'stop' },
-            warnings: [],
-            usage: {
-              inputTokens: {
-                total: 1,
-                noCache: 1,
-                cacheRead: 0,
-                cacheWrite: 0,
+          return Response.json({
+            candidates: [
+              {
+                content: {
+                  role: 'model',
+                  parts: [{ text: JSON.stringify(output) }],
+                },
+                finishReason: 'STOP',
               },
-              outputTokens: { total: 1, text: 1, reasoning: 0 },
+            ],
+            usageMetadata: {
+              promptTokenCount: 1,
+              candidatesTokenCount: 1,
+              totalTokenCount: 2,
             },
-          };
+          });
         },
-      });
-      Object.defineProperty(globalThis, 'AI_SDK_DEFAULT_PROVIDER', {
-        configurable: true,
-        value: new MockProviderV3({ languageModels: { fixture: model } }),
-      });
+      );
       await sql`UPDATE judge_runs SET until_at=now()+interval '4 minutes' WHERE id=${id}`;
       const plan = await call('plan', 'one', { turn: 1, phase: 'crosscheck' });
       assert.deepEqual(await plan.json(), {
@@ -160,7 +181,6 @@ test(
       );
       assert.equal((await call('artifact', 'one', {}, '?part=0')).status, 409);
     } finally {
-      Reflect.deleteProperty(globalThis, 'AI_SDK_DEFAULT_PROVIDER');
       await sql.end();
       await admin.unsafe('DROP SCHEMA ' + schema + ' CASCADE');
       await admin.end();
